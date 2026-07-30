@@ -1,0 +1,1732 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>闪碟外卖 · 点餐下单原型</title>
+<style>
+:root{
+  --brand:#FF5A1F; --brand-d:#E8430A; --brand-l:#FFF1EB; --accent:#FFB300;
+  --txt:#1F1F1F; --txt2:#5C5C5C; --txt3:#9A9A9A; --line:#F0F0F0; --bg:#F5F6F8;
+  --green:#00B578; --red:#FA5151; --card:#fff; --r:12px;
+  --sh:0 2px 10px rgba(0,0,0,.06);
+}
+*{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{height:100%}
+body{
+  font-family:-apple-system,BlinkMacSystemFont,"PingFang SC","Helvetica Neue","Microsoft YaHei",sans-serif;
+  background:#22252B;color:var(--txt);display:flex;align-items:center;justify-content:center;
+  min-height:100vh;overflow:hidden;
+}
+/* ============ 手机外壳 ============ */
+#stage{display:flex;align-items:center;gap:34px}
+#hint{width:250px;color:#9AA0AA;font-size:13px;line-height:1.9}
+#hint h3{color:#fff;font-size:16px;margin-bottom:10px}
+#hint b{color:var(--accent);font-weight:600}
+#hint .k{display:inline-block;background:#31353D;color:#D6DAE1;border-radius:5px;padding:1px 6px;font-size:12px}
+#hint ol{padding-left:18px}
+#hint li{margin-bottom:5px}
+.phone{
+  position:relative;width:390px;height:844px;background:#fff;border-radius:44px;
+  box-shadow:0 0 0 11px #111318,0 0 0 13px #2C3037,0 30px 70px rgba(0,0,0,.55);
+  overflow:hidden;flex:none;
+}
+.notch{position:absolute;top:9px;left:50%;transform:translateX(-50%);width:112px;height:28px;background:#111318;border-radius:16px;z-index:900}
+.statusbar{position:absolute;top:0;left:0;right:0;height:46px;display:flex;align-items:center;justify-content:space-between;padding:0 26px;font-size:13px;font-weight:600;z-index:880;pointer-events:none;color:var(--txt)}
+.statusbar.light{color:#fff}
+.viewport{position:absolute;inset:0;overflow:hidden;background:var(--bg)}
+@media (max-width:1000px){
+  #hint{display:none}
+  body{background:#fff;display:block;overflow:auto}
+  .phone{width:100%;height:100vh;height:100dvh;border-radius:0;box-shadow:none}
+  .notch{display:none}
+  .statusbar{display:none}
+}
+/* ============ 屏幕/路由 ============ */
+.screen{
+  position:absolute;inset:0;background:var(--bg);display:flex;flex-direction:column;
+  transform:translateX(100%);transition:transform .3s cubic-bezier(.32,.72,0,1);
+  will-change:transform;visibility:hidden;
+}
+.screen.on{transform:translateX(0);visibility:visible}
+.screen.below{transform:translateX(-24%);visibility:visible}
+.screen.root{transform:translateX(0)}
+.body{flex:1;overflow-y:auto;overflow-x:hidden;-webkit-overflow-scrolling:touch;padding-bottom:14px}
+.body::-webkit-scrollbar{width:0}
+/* ============ 通用 ============ */
+.nav{height:92px;padding:46px 12px 0;display:flex;align-items:center;gap:6px;background:#fff;border-bottom:1px solid var(--line);flex:none;position:relative;z-index:10}
+.nav .t{flex:1;text-align:center;font-size:17px;font-weight:600}
+.ic{width:32px;height:32px;display:flex;align-items:center;justify-content:center;font-size:19px;color:var(--txt);flex:none;cursor:pointer;border-radius:50%}
+.ic:active{background:#F2F3F5}
+.card{background:var(--card);border-radius:var(--r);margin:10px 12px;padding:14px;box-shadow:var(--sh)}
+.row{display:flex;align-items:center;gap:10px}
+.sp{justify-content:space-between}
+.gr{flex:1;min-width:0}
+.el{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.el2{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.f11{font-size:11px}.f12{font-size:12px}.f13{font-size:13px}.f15{font-size:15px}.f17{font-size:17px}
+.b6{font-weight:600}.b7{font-weight:700}
+.c2{color:var(--txt2)}.c3{color:var(--txt3)}.cb{color:var(--brand)}.cg{color:var(--green)}
+.tr{text-align:right}
+.mt6{margin-top:6px}.mt10{margin-top:10px}.mt14{margin-top:14px}
+.price{color:var(--brand);font-weight:700;font-family:-apple-system,"DIN Alternate",sans-serif}
+.price i{font-size:11px;font-style:normal;font-weight:600}
+.through{color:var(--txt3);font-size:11px;text-decoration:line-through;margin-left:4px}
+.tag{display:inline-block;font-size:10px;padding:1px 5px;border-radius:3px;background:#F5F6F8;color:var(--txt2);margin-right:4px;line-height:16px}
+.tag.o{background:var(--brand-l);color:var(--brand-d);border:.5px solid #FFD5C2}
+.tag.g{background:#E6F9F2;color:#00975F;border:.5px solid #B8EBD8}
+.tag.b{background:#EAF2FF;color:#2B6CD9;border:.5px solid #C9DEFF}
+.divider{height:1px;background:var(--line);margin:12px 0}
+.btn{background:var(--brand);color:#fff;border:none;border-radius:24px;height:44px;font-size:16px;font-weight:600;width:100%;cursor:pointer}
+.btn:active{background:var(--brand-d)}
+.btn.dis{background:#DCDDE0;color:#fff}
+.btn.ghost{background:#fff;color:var(--txt);border:1px solid #DDD}
+.chip{padding:6px 12px;border-radius:14px;background:#F5F6F8;font-size:12px;color:var(--txt2);cursor:pointer;white-space:nowrap;border:1px solid transparent}
+.chip.on{background:var(--brand-l);color:var(--brand-d);border-color:var(--brand);font-weight:600}
+.hscroll{display:flex;gap:8px;overflow-x:auto;padding:0 12px}
+.hscroll::-webkit-scrollbar{height:0}
+.stepper{display:flex;align-items:center;gap:9px}
+.stepper .m,.stepper .p{width:22px;height:22px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;cursor:pointer;line-height:1}
+.stepper .p{background:var(--brand);color:#fff;font-weight:400}
+.stepper .m{border:1.2px solid #CFCFCF;color:#777}
+.stepper .n{min-width:16px;text-align:center;font-size:14px;font-weight:600}
+.thumb{width:74px;height:74px;border-radius:9px;background:linear-gradient(140deg,#FFF3E8,#FFE2CE);display:flex;align-items:center;justify-content:center;font-size:36px;flex:none}
+.empty{text-align:center;padding:70px 0;color:var(--txt3);font-size:13px}
+.empty .e{font-size:52px;display:block;margin-bottom:12px;opacity:.55}
+/* ============ 底部 tabbar ============ */
+.tabbar{height:64px;background:#fff;border-top:1px solid var(--line);display:flex;flex:none;padding-bottom:6px}
+.tabbar .it{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;font-size:10px;color:var(--txt3);cursor:pointer}
+.tabbar .it .i{font-size:21px;filter:grayscale(1);opacity:.5}
+.tabbar .it.on{color:var(--brand);font-weight:600}
+.tabbar .it.on .i{filter:none;opacity:1}
+.tabbar .it .bd{position:absolute;transform:translate(14px,-10px);background:var(--red);color:#fff;font-size:9px;min-width:15px;height:15px;border-radius:8px;display:flex;align-items:center;justify-content:center;padding:0 4px}
+/* ============ 首页 ============ */
+.hero{background:linear-gradient(170deg,var(--brand) 0%,#FF7A3D 55%,#F5F6F8 100%);padding:50px 12px 8px}
+.loc{display:flex;align-items:center;gap:4px;color:#fff;font-size:16px;font-weight:600;padding:4px 0}
+.loc .sub{font-size:11px;font-weight:400;opacity:.9;margin-left:2px}
+.searchbar{background:#fff;border-radius:20px;height:38px;display:flex;align-items:center;padding:0 6px 0 13px;margin-top:10px;box-shadow:0 2px 8px rgba(0,0,0,.08)}
+.searchbar .ph{flex:1;color:var(--txt3);font-size:13px}
+.searchbar .go{background:var(--brand);color:#fff;font-size:12px;border-radius:15px;padding:6px 14px;font-weight:600}
+.katz{display:grid;grid-template-columns:repeat(4,1fr);gap:14px 0;background:#fff;border-radius:var(--r);margin:10px 12px;padding:16px 6px;box-shadow:var(--sh)}
+.katz .k{display:flex;flex-direction:column;align-items:center;gap:5px;cursor:pointer}
+.katz .k .ci{width:44px;height:44px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:23px;background:var(--brand-l)}
+.katz .k span{font-size:11px;color:var(--txt)}
+.banner{margin:10px 12px;border-radius:var(--r);overflow:hidden;height:92px;background:linear-gradient(110deg,#FF8A4C,#FF5A1F 60%,#E8430A);color:#fff;padding:16px 18px;display:flex;flex-direction:column;justify-content:center;position:relative;box-shadow:var(--sh)}
+.banner .t{font-size:19px;font-weight:700;letter-spacing:.5px}
+.banner .s{font-size:12px;opacity:.92;margin-top:5px}
+.banner .e{position:absolute;right:14px;bottom:-6px;font-size:64px;opacity:.28}
+.seckill{background:#fff;border-radius:var(--r);margin:10px 12px;padding:13px 0 13px 14px;box-shadow:var(--sh)}
+.clock{background:#2B2B2B;color:#fff;font-size:11px;padding:2px 6px;border-radius:4px;font-family:"DIN Alternate",monospace;letter-spacing:.5px}
+.skrow{display:flex;gap:12px;overflow-x auto;overflow-x:auto;margin-top:12px;padding-right:14px}
+.skrow::-webkit-scrollbar{height:0}
+.skcard{width:86px;flex:none;cursor:pointer}
+.skcard .im{width:86px;height:86px;border-radius:9px;background:linear-gradient(140deg,#FFF3E8,#FFDCC2);display:flex;align-items:center;justify-content:center;font-size:40px}
+.filterbar{position:sticky;top:0;background:var(--bg);z-index:6;padding:8px 0 6px;display:flex;gap:8px;overflow-x:auto}
+.filterbar::-webkit-scrollbar{height:0}
+.filterbar>div:first-child{margin-left:12px}
+.filterbar>div:last-child{margin-right:12px}
+.shop{background:#fff;border-radius:var(--r);margin:10px 12px;padding:12px;display:flex;gap:11px;box-shadow:var(--sh);cursor:pointer}
+.shop:active{background:#FAFAFA}
+.logo{width:66px;height:66px;border-radius:10px;background:linear-gradient(140deg,#FFEFE3,#FFD9BE);display:flex;align-items:center;justify-content:center;font-size:33px;flex:none;position:relative}
+.logo .bk{position:absolute;bottom:-1px;left:0;right:0;background:rgba(0,0,0,.55);color:#fff;font-size:9px;text-align:center;border-radius:0 0 10px 10px;padding:1px 0}
+.stars{color:var(--accent);font-size:10px;letter-spacing:-1px}
+.promoline{background:#FFF8F4;border-radius:6px;padding:4px 7px;margin-top:6px;font-size:10.5px;color:var(--brand-d);display:flex;gap:6px;align-items:center;overflow:hidden}
+/* ============ 店铺详情 ============ */
+.shophead{background:linear-gradient(165deg,#4A3226,#7A4B2E 60%,#A9683C);padding:46px 14px 66px;color:#fff;position:relative;overflow:hidden;flex:none}
+.shophead .bgm{position:absolute;right:-14px;top:26px;font-size:130px;opacity:.14}
+.shophead .nb{display:flex;align-items:center;gap:8px}
+.shophead .nb .ic{color:#fff}
+.shopinfo{background:#fff;border-radius:var(--r);margin:-56px 12px 0;padding:14px;position:relative;z-index:3;box-shadow:var(--sh)}
+.coupbox{display:flex;gap:8px;overflow-x:auto;margin-top:10px;padding-bottom:2px}
+.coupbox::-webkit-scrollbar{height:0}
+.coup{flex:none;border:1px dashed var(--brand);color:var(--brand-d);border-radius:5px;padding:3px 8px;font-size:10.5px;background:var(--brand-l);cursor:pointer;display:flex;align-items:center;gap:5px}
+.coup.got{border-style:solid;opacity:.5}
+.menuwrap{display:flex;flex:1;min-height:0;margin-top:10px}
+.catcol{width:88px;background:#F5F6F8;overflow-y:auto;flex:none}
+.catcol::-webkit-scrollbar{width:0}
+.catcol .c{padding:15px 8px;font-size:12.5px;color:var(--txt2);text-align:center;cursor:pointer;line-height:1.35;position:relative}
+.catcol .c.on{background:#fff;color:var(--txt);font-weight:600}
+.catcol .c.on:before{content:"";position:absolute;left:0;top:50%;transform:translateY(-50%);width:3px;height:16px;background:var(--brand);border-radius:2px}
+.catcol .c .n{position:absolute;top:8px;right:8px;background:var(--red);color:#fff;font-size:9px;min-width:14px;height:14px;border-radius:7px;display:flex;align-items:center;justify-content:center}
+.itemcol{flex:1;overflow-y:auto;background:#fff;padding:0 12px}
+.itemcol::-webkit-scrollbar{width:0}
+.dish{display:flex;gap:10px;padding:14px 0;border-bottom:1px solid #F7F7F7}
+.dish .op{margin-top:auto;display:flex;align-items:flex-end;justify-content:space-between}
+.specbtn{background:var(--brand);color:#fff;font-size:11.5px;border-radius:13px;padding:5px 11px;font-weight:600;cursor:pointer}
+/* 购物车条 */
+.cartbar{flex:none;height:56px;background:#fff;border-top:1px solid var(--line);display:flex;align-items:center;padding:0 12px;gap:10px;position:relative;z-index:20}
+.cartbtn{width:47px;height:47px;border-radius:50%;background:var(--brand);display:flex;align-items:center;justify-content:center;font-size:24px;position:relative;margin-top:-16px;box-shadow:0 4px 12px rgba(255,90,31,.4);cursor:pointer}
+.cartbtn.off{background:#C9CACD;box-shadow:none}
+.cartbtn .bd{position:absolute;top:-4px;right:-4px;background:var(--red);color:#fff;font-size:10px;min-width:18px;height:18px;border-radius:9px;display:flex;align-items:center;justify-content:center;border:2px solid #fff;font-weight:600}
+.gobtn{background:var(--brand);color:#fff;border-radius:20px;padding:0 20px;height:38px;display:flex;align-items:center;font-size:15px;font-weight:600;cursor:pointer}
+.gobtn.dis{background:#E4E5E8;color:#9A9A9A}
+/* ============ 遮罩/弹层 ============ */
+.mask{position:absolute;inset:0;background:rgba(0,0,0,.5);opacity:0;visibility:hidden;transition:.25s;z-index:500}
+.mask.on{opacity:1;visibility:visible}
+.sheet{position:absolute;left:0;right:0;bottom:0;background:#fff;border-radius:16px 16px 0 0;transform:translateY(101%);transition:transform .3s cubic-bezier(.32,.72,0,1);z-index:520;max-height:82%;display:flex;flex-direction:column}
+.sheet.on{transform:translateY(0)}
+.sheet .sh{padding:15px 16px 10px;font-size:16px;font-weight:600;text-align:center;position:relative;flex:none}
+.sheet .sh .x{position:absolute;right:12px;top:12px;font-size:19px;color:var(--txt3);cursor:pointer}
+.sheet .sb{overflow-y:auto;padding:0 16px}
+.sheet .sb::-webkit-scrollbar{width:0}
+.sheet .sf{padding:12px 16px 22px;flex:none;border-top:1px solid var(--line)}
+.optgrp{margin-bottom:16px}
+.optgrp .gn{font-size:13px;font-weight:600;margin-bottom:9px}
+.optgrp .gn em{font-size:10.5px;color:var(--txt3);font-style:normal;font-weight:400;margin-left:5px}
+.opts{display:flex;flex-wrap:wrap;gap:8px}
+.opt{padding:6px 13px;border-radius:15px;background:#F5F6F8;font-size:12.5px;color:var(--txt2);cursor:pointer;border:1px solid transparent}
+.opt.on{background:var(--brand-l);color:var(--brand-d);border-color:var(--brand);font-weight:600}
+.toast{position:absolute;left:50%;top:44%;transform:translate(-50%,-50%);background:rgba(0,0,0,.8);color:#fff;padding:11px 18px;border-radius:9px;font-size:13.5px;z-index:900;opacity:0;transition:.2s;pointer-events:none;max-width:76%;text-align:center;line-height:1.5}
+.toast.on{opacity:1}
+.dialog{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%) scale(.9);width:76%;background:#fff;border-radius:14px;z-index:560;opacity:0;visibility:hidden;transition:.22s;overflow:hidden}
+.dialog.on{opacity:1;visibility:visible;transform:translate(-50%,-50%) scale(1)}
+.dialog .dt{padding:22px 20px 8px;font-size:16px;font-weight:600;text-align:center}
+.dialog .dc{padding:0 20px 18px;font-size:13px;color:var(--txt2);text-align:center;line-height:1.6}
+.dialog .da{display:flex;border-top:1px solid var(--line)}
+.dialog .da div{flex:1;text-align:center;padding:13px;font-size:15px;cursor:pointer}
+.dialog .da div+div{border-left:1px solid var(--line);color:var(--brand);font-weight:600}
+/* ============ 结算页 ============ */
+.line{display:flex;justify-content:space-between;align-items:center;padding:13px 0;border-bottom:1px solid var(--line);font-size:14px;cursor:pointer}
+.line:last-child{border-bottom:none}
+.line .lv{color:var(--txt2);font-size:13.5px;display:flex;align-items:center;gap:4px;max-width:62%;text-align:right}
+.deliverytabs{display:flex;background:#F5F6F8;border-radius:9px;padding:3px;margin-bottom:4px}
+.deliverytabs .d{flex:1;text-align:center;padding:8px 0;font-size:13px;border-radius:7px;color:var(--txt2);cursor:pointer}
+.deliverytabs .d.on{background:#fff;color:var(--brand);font-weight:600;box-shadow:0 1px 4px rgba(0,0,0,.08)}
+.paybar{flex:none;height:60px;background:#fff;border-top:1px solid var(--line);display:flex;align-items:center;padding:0 14px;gap:12px}
+.payway{display:flex;align-items:center;gap:11px;padding:13px 0;border-bottom:1px solid var(--line);cursor:pointer}
+.payway .pi{width:30px;height:30px;border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:17px;color:#fff}
+.radio{width:19px;height:19px;border-radius:50%;border:1.5px solid #D5D5D5;flex:none;display:flex;align-items:center;justify-content:center}
+.radio.on{border-color:var(--brand);background:var(--brand);color:#fff;font-size:11px}
+/* 支付密码 */
+.pwd{display:flex;justify-content:center;gap:0;margin:20px 0 6px}
+.pwd .d{width:42px;height:44px;border:1px solid #E2E2E2;border-left:none;display:flex;align-items:center;justify-content:center;font-size:22px}
+.pwd .d:first-child{border-left:1px solid #E2E2E2;border-radius:7px 0 0 7px}
+.pwd .d:last-child{border-radius:0 7px 7px 0}
+.keypad{display:grid;grid-template-columns:repeat(3,1fr);gap:1px;background:#D8DAE0;margin-top:14px}
+.keypad .k{background:#fff;height:52px;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:500;cursor:pointer}
+.keypad .k:active{background:#E9EAEE}
+.keypad .k.gray{background:#EFF0F3;font-size:17px}
+.spin{width:44px;height:44px;border:3px solid #F0F0F0;border-top-color:var(--brand);border-radius:50%;animation:sp .8s linear infinite;margin:0 auto}
+@keyframes sp{to{transform:rotate(360deg)}}
+.okmark{width:74px;height:74px;border-radius:50%;background:var(--green);color:#fff;font-size:40px;display:flex;align-items:center;justify-content:center;margin:0 auto;animation:pop .45s cubic-bezier(.2,1.5,.4,1)}
+@keyframes pop{0%{transform:scale(0)}100%{transform:scale(1)}}
+/* ============ 订单追踪 ============ */
+.trackhead{background:linear-gradient(165deg,var(--brand),#FF8347);color:#fff;padding:46px 16px 18px;flex:none}
+.mapbox{margin:-4px 12px 0;border-radius:var(--r);overflow:hidden;box-shadow:var(--sh);background:#E8EDF2;position:relative}
+.mapbox svg{display:block;width:100%}
+.steps{display:flex;margin-top:18px}
+.steps .st{flex:1;text-align:center;position:relative;font-size:10.5px;color:var(--txt3)}
+.steps .st .dot{width:11px;height:11px;border-radius:50%;background:#DCDDE0;margin:0 auto 6px;position:relative;z-index:2}
+.steps .st:before{content:"";position:absolute;top:5px;left:0;right:0;height:2px;background:#E8E9EB}
+.steps .st:first-child:before{left:50%}
+.steps .st:last-child:before{right:50%}
+.steps .st.done{color:var(--brand);font-weight:600}
+.steps .st.done .dot{background:var(--brand)}
+.steps .st.done:before{background:var(--brand)}
+.steps .st.cur .dot{box-shadow:0 0 0 4px rgba(255,90,31,.2);animation:pl 1.4s infinite}
+@keyframes pl{50%{box-shadow:0 0 0 8px rgba(255,90,31,.06)}}
+.rider{display:flex;align-items:center;gap:11px;padding:12px 0 2px}
+.rider .av{width:42px;height:42px;border-radius:50%;background:#EAF2FF;display:flex;align-items:center;justify-content:center;font-size:21px;flex:none}
+.rider .act{width:34px;height:34px;border-radius:50%;background:var(--green);color:#fff;display:flex;align-items:center;justify-content:center;font-size:16px;cursor:pointer}
+/* 评价 */
+.starpick{font-size:30px;letter-spacing:6px;color:#DDD;cursor:pointer;user-select:none}
+.starpick .on{color:var(--accent)}
+textarea{width:100%;border:none;background:#F7F8FA;border-radius:9px;padding:11px;font-size:13.5px;font-family:inherit;resize:none;height:88px;outline:none}
+input.tf{width:100%;border:none;font-size:14px;outline:none;text-align:right;font-family:inherit;background:transparent}
+/* 我的 */
+.mehead{background:linear-gradient(160deg,var(--brand),#FF8A4C);padding:56px 16px 46px;color:#fff;flex:none}
+.vipcard{margin:-30px 12px 0;background:linear-gradient(105deg,#3A3226,#5C4A32);border-radius:var(--r);padding:14px;color:#F5DFB8;display:flex;align-items:center;justify-content:space-between;box-shadow:var(--sh)}
+.grid4{display:grid;grid-template-columns:repeat(4,1fr);text-align:center}
+.grid4 .g{padding:6px 0;cursor:pointer}
+.grid4 .g .n{font-size:18px;font-weight:700}
+.menulist .mi{display:flex;align-items:center;gap:11px;padding:14px 0;border-bottom:1px solid var(--line);font-size:14px;cursor:pointer}
+.menulist .mi:last-child{border-bottom:none}
+.menulist .mi .mic{width:26px;text-align:center;font-size:17px}
+.badge-float{position:absolute;right:16px;bottom:84px;background:rgba(0,0,0,.7);color:#fff;font-size:11px;padding:7px 11px;border-radius:16px;z-index:30}
+.demo-note{background:#FFFBE6;border:1px solid #FFE58F;color:#8C6D1F;font-size:11px;padding:7px 10px;border-radius:7px;margin:10px 12px;line-height:1.6}
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="hint">
+    <h3>闪碟外卖 · 点餐下单原型</h3>
+    完整走一遍真实外卖购买链路，<b>不会产生任何真实订单或扣款</b>，全部为本地模拟数据。
+    <ol>
+      <li>首页选店 → 店铺点菜（含多规格/加料）</li>
+      <li>购物车 → 确认订单（地址/配送/优惠券）</li>
+      <li>选支付方式 → 模拟密码 → 支付中</li>
+      <li>下单成功 → 骑手实时配送地图</li>
+      <li>订单详情 → 确认收货 → 评价</li>
+    </ol>
+    <div style="margin-top:14px;color:#7C838E">提示：支付密码随便按 <span class="k">6 位</span> 数字即可；配送进度约 <span class="k">5 秒</span> 推进一步，可点"加速"。</div>
+  </div>
+
+  <div class="phone">
+    <div class="notch"></div>
+    <div class="statusbar" id="sbar"><span>9:41</span><span>●●●● ᯤ 100%</span></div>
+    <div class="viewport" id="vp">
+      <!-- screens injected here -->
+      <div class="mask" id="mask"></div>
+      <div class="sheet" id="sheet"></div>
+      <div class="dialog" id="dialog"></div>
+      <div class="toast" id="toast"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+/* =======================================================================
+   闪碟外卖 · 点餐下单原型  —  纯前端模拟，无任何真实交易
+   ======================================================================= */
+const $ = s => document.querySelector(s);
+const vp = $('#vp');
+const money = n => (Math.round(n*100)/100).toFixed(2);
+
+/* ---------------- 数据 ---------------- */
+const CATS = [['🍜','美食'],['🧋','甜点饮品'],['🏪','超市便利'],['🥬','买菜'],
+              ['🍎','水果'],['💊','买药'],['🏃','跑腿代购'],['💐','鲜花']];
+
+const SPICY = {name:'辣度',required:true,opts:[['不辣',0],['微辣',0],['中辣',0],['特辣',0]]};
+const ICE   = {name:'温度',required:true,opts:[['正常冰',0],['少冰',0],['去冰',0],['常温',0],['热饮',1]]};
+const SUGAR = {name:'甜度',required:true,opts:[['标准糖',0],['七分糖',0],['半糖',0],['三分糖',0],['无糖',0]]};
+
+const SHOPS = [
+ {
+  id:'s1', name:'川小灶 · 麻辣香锅（人民路店）', emoji:'🌶️', head:'🍲',
+  rate:4.8, sales:2317, mins:28, dist:1.2, fee:3, min:20, tags:['品质联盟','准时达','开发票'],
+  notice:'本店所有菜品现炒现做，高峰期出餐约 15 分钟，请耐心等待～',
+  promos:[[25,5],[45,12],[80,25]],
+  coupons:[{id:'c1',amt:6,need:30,txt:'满30减6'},{id:'c2',amt:15,need:60,txt:'满60减15'}],
+  menu:[
+   {cat:'招牌热菜', items:[
+     {id:'d1',name:'秘制麻辣香锅',desc:'现炒香锅底料 · 自选荤素搭配',price:39.9,orig:52,sales:892,praise:98,emoji:'🍲',pack:1,
+      specs:[SPICY,{name:'份量',required:true,opts:[['小份（1-2人）',0],['中份（2-3人）',12],['大份（3-4人）',24]]}],
+      addons:[['宽粉',3],['午餐肉',5],['鹌鹑蛋',4],['土豆片',3],['金针菇',3],['虾滑',9]]},
+     {id:'d2',name:'冒菜大碗（荤素双拼）',desc:'红油冒菜 · 20+种食材',price:26.8,orig:32,sales:641,praise:96,emoji:'🥘',pack:1,
+      specs:[SPICY],addons:[['加米饭',2],['加酥肉',8]]},
+     {id:'d3',name:'干锅肥肠',desc:'柴火干锅 · 香辣下饭',price:45,orig:0,sales:288,praise:94,emoji:'🍳',pack:1,specs:[SPICY],addons:[]},
+   ]},
+   {cat:'特色小吃', items:[
+     {id:'d4',name:'现炸酥肉（半斤）',desc:'椒麻味 · 外酥里嫩',price:19.9,orig:24,sales:733,praise:97,emoji:'🍗',pack:.5,specs:[],addons:[]},
+     {id:'d5',name:'钟水饺（10只）',desc:'红油甜辣 · 手工现包',price:14,orig:0,sales:412,praise:95,emoji:'🥟',pack:.5,specs:[],addons:[['加红油',0],['加花生碎',1]]},
+     {id:'d6',name:'蒜泥白肉',desc:'凉菜 · 蒜香浓郁',price:16,orig:0,sales:187,praise:92,emoji:'🥓',pack:.5,specs:[],addons:[]},
+   ]},
+   {cat:'主食', items:[
+     {id:'d7',name:'四川丝苗米饭',desc:'一人份',price:2,orig:0,sales:1560,praise:99,emoji:'🍚',pack:0,specs:[],addons:[]},
+     {id:'d8',name:'红糖锅盔',desc:'现烤酥脆',price:6,orig:0,sales:355,praise:93,emoji:'🥯',pack:.5,specs:[],addons:[]},
+   ]},
+   {cat:'酒水饮料', items:[
+     {id:'d9',name:'手打红糖冰粉',desc:'解辣必备 · 现打',price:9.9,orig:12,sales:988,praise:98,emoji:'🍧',pack:.5,specs:[],addons:[['加芋圆',3],['加葡萄干',1]]},
+     {id:'d10',name:'唯怡豆奶 250ml',desc:'',price:5,orig:0,sales:520,praise:96,emoji:'🥛',pack:0,specs:[],addons:[]},
+   ]}
+  ]
+ },
+ {
+  id:'s2', name:'老陈牛肉面 · 24小时', emoji:'🍜', head:'🍜',
+  rate:4.6, sales:3821, mins:22, dist:0.8, fee:2, min:15, tags:['准时达','24小时'],
+  notice:'面条现煮，汤头每日凌晨熬制。',
+  promos:[[20,4],[35,9]],
+  coupons:[{id:'c3',amt:5,need:25,txt:'满25减5'}],
+  menu:[
+   {cat:'招牌面食', items:[
+     {id:'e1',name:'红烧牛肉面',desc:'大块牛腱 · 秘制卤汤',price:28,orig:34,sales:1820,praise:97,emoji:'🍜',pack:1,
+      specs:[{name:'面量',required:true,opts:[['标准',0],['加面',3]]},SPICY],addons:[['加牛肉',12],['加卤蛋',3],['加青菜',2]]},
+     {id:'e2',name:'番茄肥牛面',desc:'酸甜开胃',price:26,orig:0,sales:762,praise:95,emoji:'🍲',pack:1,specs:[{name:'面量',required:true,opts:[['标准',0],['加面',3]]}],addons:[['加卤蛋',3]]},
+     {id:'e3',name:'雪菜肉丝面',desc:'清爽咸香',price:19,orig:0,sales:433,praise:93,emoji:'🥣',pack:1,specs:[],addons:[]},
+   ]},
+   {cat:'配菜卤味', items:[
+     {id:'e4',name:'卤牛腱拼盘',desc:'',price:32,orig:0,sales:266,praise:96,emoji:'🥩',pack:.5,specs:[],addons:[]},
+     {id:'e5',name:'凉拌黄瓜',desc:'',price:8,orig:0,sales:588,praise:94,emoji:'🥒',pack:.5,specs:[],addons:[]},
+     {id:'e6',name:'卤蛋（2只）',desc:'',price:6,orig:0,sales:901,praise:98,emoji:'🥚',pack:0,specs:[],addons:[]},
+   ]},
+   {cat:'饮品', items:[
+     {id:'e7',name:'冰镇酸梅汤',desc:'',price:7,orig:0,sales:670,praise:97,emoji:'🧊',pack:0,specs:[],addons:[]},
+   ]}
+  ]
+ },
+ {
+  id:'s3', name:'满杯茶研所（旗舰店）', emoji:'🧋', head:'🧋',
+  rate:4.9, sales:4512, mins:18, dist:0.5, fee:1.5, min:10, tags:['品质联盟','30分钟必达'],
+  notice:'饮品制作约 8 分钟，不接受更换配料的备注哦～',
+  promos:[[18,3],[36,8]],
+  coupons:[{id:'c4',amt:4,need:20,txt:'满20减4'},{id:'c5',amt:10,need:45,txt:'满45减10'}],
+  menu:[
+   {cat:'招牌奶茶', items:[
+     {id:'f1',name:'芋泥波波奶茶',desc:'手打芋泥 · 黑糖珍珠',price:16,orig:20,sales:2310,praise:99,emoji:'🧋',pack:0,
+      specs:[{name:'规格',required:true,opts:[['中杯 500ml',0],['大杯 700ml',3]]},ICE,SUGAR],
+      addons:[['黑糖珍珠',3],['椰果',2],['布丁',3],['芋圆',4],['奶盖',5]]},
+     {id:'f2',name:'茉香奶绿',desc:'茉香绿茶 + 奶',price:12,orig:0,sales:1204,praise:97,emoji:'🥤',pack:0,
+      specs:[{name:'规格',required:true,opts:[['中杯',0],['大杯',3]]},ICE,SUGAR],addons:[['黑糖珍珠',3],['椰果',2]]},
+   ]},
+   {cat:'鲜果茶', items:[
+     {id:'f3',name:'满杯百香果双响炮',desc:'鲜果现切 · 无香精',price:18,orig:22,sales:1655,praise:98,emoji:'🍹',pack:0,
+      specs:[{name:'规格',required:true,opts:[['中杯',0],['大杯',4]]},ICE,SUGAR],addons:[['加椰果',2],['加脆啵啵',3]]},
+     {id:'f4',name:'霸气芝士葡萄',desc:'',price:22,orig:0,sales:733,praise:96,emoji:'🍇',pack:0,specs:[ICE,SUGAR],addons:[]},
+   ]},
+   {cat:'烘焙甜品', items:[
+     {id:'f5',name:'原味蛋挞（2只）',desc:'现烤',price:9.9,orig:0,sales:844,praise:95,emoji:'🥮',pack:.5,specs:[],addons:[]},
+     {id:'f6',name:'脏脏可可欧包',desc:'',price:14,orig:0,sales:322,praise:94,emoji:'🍞',pack:.5,specs:[],addons:[]},
+   ]}
+  ]
+ },
+ {
+  id:'s4', name:'麦香源汉堡炸鸡', emoji:'🍔', head:'🍔',
+  rate:4.5, sales:1980, mins:25, dist:1.6, fee:3.5, min:20, tags:['准时达'],
+  notice:'', promos:[[30,8]], coupons:[{id:'c6',amt:8,need:35,txt:'满35减8'}],
+  menu:[
+   {cat:'超值套餐', items:[
+     {id:'g1',name:'香辣鸡腿堡套餐',desc:'汉堡+薯条+可乐',price:29.9,orig:38,sales:912,praise:94,emoji:'🍔',pack:1,
+      specs:[{name:'饮料',required:true,opts:[['可乐',0],['雪碧',0],['橙汁',2]]}],addons:[['加鸡块5块',9]]},
+     {id:'g2',name:'双层牛肉堡套餐',desc:'',price:35.9,orig:0,sales:433,praise:92,emoji:'🍟',pack:1,specs:[],addons:[]},
+   ]},
+   {cat:'单品', items:[
+     {id:'g3',name:'黄金炸鸡（6块）',desc:'',price:22,orig:0,sales:766,praise:93,emoji:'🍗',pack:.5,specs:[],addons:[]},
+     {id:'g4',name:'粗薯条（大）',desc:'',price:11,orig:0,sales:1122,praise:96,emoji:'🍟',pack:.5,specs:[],addons:[]},
+   ]}
+  ]
+ },
+ {
+  id:'s5', name:'湘小炒 · 现炒小碗菜', emoji:'🥗', head:'🍱',
+  rate:4.7, sales:2645, mins:30, dist:2.1, fee:4, min:18, tags:['现炒','开发票'],
+  notice:'', promos:[[28,6],[50,14]], coupons:[],
+  menu:[
+   {cat:'现炒小碗', items:[
+     {id:'h1',name:'小炒黄牛肉',desc:'湘式小炒 · 香辣',price:32,orig:0,sales:820,praise:96,emoji:'🥘',pack:1,specs:[SPICY],addons:[]},
+     {id:'h2',name:'剁椒蒸蛋',desc:'',price:14,orig:0,sales:544,praise:95,emoji:'🍳',pack:.5,specs:[],addons:[]},
+     {id:'h3',name:'农家小炒肉',desc:'',price:26,orig:0,sales:1033,praise:94,emoji:'🥓',pack:1,specs:[SPICY],addons:[]},
+   ]},
+   {cat:'主食汤品', items:[
+     {id:'h4',name:'米饭',desc:'',price:2,orig:0,sales:2100,praise:99,emoji:'🍚',pack:0,specs:[],addons:[]},
+     {id:'h5',name:'紫菜蛋花汤',desc:'',price:6,orig:0,sales:388,praise:93,emoji:'🍜',pack:.5,specs:[],addons:[]},
+   ]}
+  ]
+ },
+ {
+  id:'s6', name:'邻鲜果切 · 每日现切', emoji:'🍓', head:'🍉',
+  rate:4.8, sales:1533, mins:20, dist:0.9, fee:2.5, min:15, tags:['当日现切','品质联盟'],
+  notice:'', promos:[[30,5]], coupons:[{id:'c7',amt:5,need:30,txt:'满30减5'}],
+  menu:[
+   {cat:'混合果切', items:[
+     {id:'i1',name:'缤纷八拼果切盒',desc:'8种时令水果 · 约600g',price:29.9,orig:36,sales:733,praise:98,emoji:'🍱',pack:0,specs:[],addons:[['加酸奶',5],['加坚果碎',3]]},
+     {id:'i2',name:'超厚芒果酸奶碗',desc:'',price:24,orig:0,sales:411,praise:97,emoji:'🥣',pack:0,specs:[],addons:[]},
+   ]},
+   {cat:'单品水果', items:[
+     {id:'i3',name:'红颜草莓 250g',desc:'',price:26,orig:32,sales:288,praise:95,emoji:'🍓',pack:0,specs:[],addons:[]},
+     {id:'i4',name:'麒麟西瓜切盒',desc:'',price:12,orig:0,sales:655,praise:96,emoji:'🍉',pack:0,specs:[],addons:[]},
+   ]}
+  ]
+ }
+];
+
+const HOTWORDS = ['麻辣香锅','奶茶','牛肉面','炸鸡','果切','小碗菜','冰粉','汉堡'];
+
+/* ---------------- 全局状态 ---------------- */
+const S = {
+  addr: [
+    {id:'a1',name:'张小闪',phone:'138****6620',tag:'公司',addr:'创智天地 3 号楼 12F 研发部',detail:'杨浦区淞沪路 388 号',def:true},
+    {id:'a2',name:'张小闪',phone:'138****6620',tag:'家',addr:'保利叶上海 7 栋 2201',detail:'浦东新区锦绣东路 2777 号',def:false},
+  ],
+  addrSel:'a1',
+  cart:{shopId:null,items:[]},
+  gotCoupons:[],            // 已领取店铺券 id
+  platCoupons:[
+    {id:'p1',amt:12,need:40,txt:'平台新客券 满40减12',exp:'2026-08-15'},
+    {id:'p2',amt:5,need:20,txt:'午市专享 满20减5',exp:'2026-08-02'},
+  ],
+  checkout:{mode:'std',timeIdx:0,couponId:null,platId:null,tableware:0,note:'',pay:'wx',invoice:false},
+  orders:[],
+  curOrder:null,
+  filter:{sort:'综合排序',only:[]},
+  timer:null,
+};
+
+/* ---------------- 路由 ---------------- */
+const SCREENS = {};   // id -> {el, mount}
+let stack = ['home'];
+
+function defScreen(id, mount, root){
+  const el = document.createElement('div');
+  el.className = 'screen' + (root?' root':'');
+  el.id = 'sc-'+id;
+  vp.insertBefore(el, $('#mask'));
+  SCREENS[id] = {el, mount};
+}
+function paint(){
+  Object.keys(SCREENS).forEach(id=>{
+    const i = stack.indexOf(id), el = SCREENS[id].el;
+    el.classList.remove('on','below');
+    if(i === stack.length-1) el.classList.add('on');
+    else if(i > -1) el.classList.add('below');
+  });
+  const top = stack[stack.length-1];
+  $('#sbar').classList.toggle('light', ['shop','track','pay'].includes(top));
+}
+function nav(id, data){
+  if(!SCREENS[id]) return;
+  const i = stack.indexOf(id);
+  if(i > -1) stack.length = i;      // 避免重复入栈
+  SCREENS[id].mount(data||{});
+  stack.push(id);
+  paint();
+  SCREENS[id].el.querySelector('.body') && (SCREENS[id].el.querySelector('.body').scrollTop = 0);
+}
+function back(){
+  if(stack.length<=1) return;
+  stack.pop();
+  const id = stack[stack.length-1];
+  SCREENS[id].mount(SCREENS[id].data||{});
+  paint();
+}
+function tabTo(id){ stack = [id]; SCREENS[id].mount({}); paint(); }
+
+/* ---------------- 通用 UI ---------------- */
+let toastT;
+function toast(msg, ms){
+  const t = $('#toast'); t.innerHTML = msg; t.classList.add('on');
+  clearTimeout(toastT); toastT = setTimeout(()=>t.classList.remove('on'), ms||1600);
+}
+function closeSheet(){ $('#sheet').classList.remove('on'); $('#mask').classList.remove('on'); }
+function openSheet(title, bodyHTML, footHTML){
+  $('#sheet').innerHTML =
+    `<div class="sh">${title}<span class="x" onclick="closeSheet()">✕</span></div>
+     <div class="sb">${bodyHTML}</div>` + (footHTML?`<div class="sf">${footHTML}</div>`:'');
+  $('#sheet').classList.add('on'); $('#mask').classList.add('on');
+}
+function closeDialog(){ $('#dialog').classList.remove('on'); $('#mask').classList.remove('on'); }
+function confirmBox(title, content, okTxt, cb){
+  $('#dialog').innerHTML =
+    `<div class="dt">${title}</div><div class="dc">${content}</div>
+     <div class="da"><div onclick="closeDialog()">取消</div><div id="dlgOK">${okTxt}</div></div>`;
+  $('#dialog').classList.add('on'); $('#mask').classList.add('on');
+  $('#dlgOK').onclick = ()=>{ closeDialog(); cb&&cb(); };
+}
+$('#mask').onclick = ()=>{ closeSheet(); closeDialog(); };
+const stars = r => { const f=Math.round(r); return '★'.repeat(f)+'☆'.repeat(5-f); };
+
+/* ---------------- 购物车逻辑 ---------------- */
+function findShop(id){ return SHOPS.find(s=>s.id===id); }
+function findItem(shopId, itemId){
+  const s = findShop(shopId); let r=null;
+  s.menu.forEach(c=>c.items.forEach(i=>{ if(i.id===itemId) r=i; }));
+  return r;
+}
+function cartCount(){ return S.cart.items.reduce((a,b)=>a+b.qty,0); }
+function cartQtyOf(itemId){ return S.cart.items.filter(i=>i.itemId===itemId).reduce((a,b)=>a+b.qty,0); }
+function subtotal(){ return S.cart.items.reduce((a,b)=>a+b.unit*b.qty,0); }
+function packFee(){ return S.cart.items.reduce((a,b)=>a+(b.pack||0)*b.qty,0); }
+
+function addToCart(shopId, itemId, specSel, addonSel, qty){
+  if(S.cart.shopId && S.cart.shopId!==shopId && S.cart.items.length){
+    confirmBox('切换店铺','购物车中已有其他店铺的商品，<br>是否清空并加入本店商品？','清空并加入',()=>{
+      S.cart={shopId,items:[]}; addToCart(shopId,itemId,specSel,addonSel,qty);
+    });
+    return;
+  }
+  S.cart.shopId = shopId;
+  const it = findItem(shopId,itemId);
+  const specs = specSel||[], addons = addonSel||[];
+  let unit = it.price;
+  specs.forEach(s=>unit += s.delta);
+  addons.forEach(a=>unit += a.price);
+  const desc = [...specs.map(s=>s.label), ...addons.map(a=>'+'+a.label)].join('/');
+  const key = itemId + '|' + desc;
+  const ex = S.cart.items.find(i=>i.key===key);
+  if(ex) ex.qty += (qty||1);
+  else S.cart.items.push({key,itemId,name:it.name,emoji:it.emoji,unit,base:it.price,desc,pack:it.pack,qty:qty||1});
+  refreshShop();
+}
+function changeQty(key, d){
+  const i = S.cart.items.findIndex(x=>x.key===key);
+  if(i<0) return;
+  S.cart.items[i].qty += d;
+  if(S.cart.items[i].qty<=0) S.cart.items.splice(i,1);
+  if(!S.cart.items.length) S.cart.shopId = null;
+  refreshShop();
+  if($('#sheet').classList.contains('on')) openCartSheet();
+}
+function refreshShop(){
+  if(stack.includes('shop') && SCREENS.shop.data) SCREENS.shop.mount(SCREENS.shop.data);
+  paint();
+}
+
+/* 满减最优 */
+function bestPromo(shop, sub){
+  let best = 0, txt = '';
+  (shop.promos||[]).forEach(([need,amt])=>{ if(sub>=need && amt>best){best=amt;txt=`满${need}减${amt}`;} });
+  return {amt:best, txt};
+}
+function availCoupons(shop, sub){
+  const list = [];
+  (shop.coupons||[]).forEach(c=>{ if(S.gotCoupons.includes(c.id)) list.push({...c, kind:'店铺券'}); });
+  S.platCoupons.forEach(c=>list.push({...c, kind:'平台券'}));
+  return list.map(c=>({...c, usable: sub>=c.need}));
+}
+function calc(){
+  const shop = findShop(S.cart.shopId);
+  const sub = subtotal();
+  const pack = packFee();
+  const mode = S.checkout.mode;
+  const fee = mode==='self' ? 0 : (mode==='fast' ? shop.fee+1.5 : shop.fee);
+  const promo = bestPromo(shop, sub);
+  const all = availCoupons(shop, sub);
+  const cp = all.find(c=>c.id===(S.checkout.couponId));
+  const cpAmt = (cp && cp.usable) ? cp.amt : 0;
+  const newUser = 3;   // 新客立减
+  let total = sub + pack + fee - promo.amt - cpAmt - newUser;
+  if(total < 0.01) total = 0.01;
+  return {shop, sub, pack, fee, promo, cp, cpAmt, newUser, total, saved: promo.amt+cpAmt+newUser, mode};
+}
+const TIMESLOTS = ['尽快送达（预计 %s 分钟）','今天 12:30 - 12:45','今天 13:00 - 13:15','今天 18:00 - 18:15','今天 19:00 - 19:15'];
+function timeText(){
+  const shop = findShop(S.cart.shopId);
+  const t = TIMESLOTS[S.checkout.timeIdx];
+  return t.replace('%s', shop? shop.mins : 30);
+}
+
+/* =======================================================================
+   首页
+   ======================================================================= */
+defScreen('home', function(){
+  const f = S.filter;
+  let list = SHOPS.slice();
+  if(f.sort==='距离最近') list.sort((a,b)=>a.dist-b.dist);
+  if(f.sort==='评分最高') list.sort((a,b)=>b.rate-a.rate);
+  if(f.sort==='销量最高') list.sort((a,b)=>b.sales-a.sales);
+  if(f.sort==='起送价最低') list.sort((a,b)=>a.min-b.min);
+  if(f.only.includes('准时达')) list = list.filter(s=>s.tags.includes('准时达'));
+  if(f.only.includes('品质联盟')) list = list.filter(s=>s.tags.includes('品质联盟'));
+
+  this.el.innerHTML = `
+  <div class="body" style="padding-bottom:0">
+    <div class="hero">
+      <div class="loc" onclick="toast('模拟原型：定位切换未开放')">
+        📍 创智天地 3 号楼 <span style="font-size:12px">▾</span>
+        <span class="sub">· 距你 80m</span>
+      </div>
+      <div class="searchbar" onclick="nav('search')">
+        <span style="font-size:15px;margin-right:6px">🔍</span>
+        <span class="ph">搜索 麻辣香锅 / 奶茶 / 牛肉面</span>
+        <span class="go">搜索</span>
+      </div>
+    </div>
+
+    <div class="katz">
+      ${CATS.map(c=>`<div class="k" onclick="catTap('${c[1]}')"><div class="ci">${c[0]}</div><span>${c[1]}</span></div>`).join('')}
+    </div>
+
+    <div class="banner" onclick="toast('活动会场为原型占位页')">
+      <div class="t">新客立减 ¥3 + 满40减12</div>
+      <div class="s">首单最高省 ¥20 · 配送费低至 ¥1.5</div>
+      <div class="e">🎁</div>
+    </div>
+
+    <div class="seckill">
+      <div class="row sp" style="padding-right:14px">
+        <div class="row" style="gap:7px">
+          <span class="f17 b7">⚡ 限时秒杀</span>
+          <span class="clock" id="clk">00:00:00</span>
+        </div>
+        <span class="f12 c3">全部 ›</span>
+      </div>
+      <div class="skrow">
+        ${[['s1','d1'],['s3','f1'],['s2','e1'],['s6','i1'],['s4','g1']].map(([sid,iid])=>{
+          const it = findItem(sid,iid);
+          return `<div class="skcard" onclick="nav('shop',{id:'${sid}'})">
+            <div class="im">${it.emoji}</div>
+            <div class="f12 el mt6">${it.name}</div>
+            <div class="row" style="gap:2px"><span class="price f13"><i>¥</i>${money(it.price*0.8)}</span>
+            <span class="through">${it.orig?money(it.orig):money(it.price)}</span></div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>
+
+    <div class="demo-note">这是一个交互原型：所有店铺、菜品、价格均为模拟数据，下单流程可完整体验，<b>不会产生真实订单或扣款</b>。</div>
+
+    <div class="filterbar">
+      ${['综合排序','距离最近','评分最高','销量最高','起送价最低'].map(x=>
+        `<div class="chip ${f.sort===x?'on':''}" onclick="setSort('${x}')">${x}${x==='综合排序'?' ▾':''}</div>`).join('')}
+      ${['准时达','品质联盟'].map(x=>
+        `<div class="chip ${f.only.includes(x)?'on':''}" onclick="toggleOnly('${x}')">${x}</div>`).join('')}
+    </div>
+
+    ${list.map(shopCardHTML).join('')}
+    <div class="c3 f12" style="text-align:center;padding:16px 0 22px">— 附近共 ${list.length} 家店铺 —</div>
+  </div>
+  ${tabbarHTML('home')}`;
+  startClock();
+}, true);
+
+function shopCardHTML(s){
+  const promo = (s.promos||[]).map(([n,a])=>`满${n}减${a}`).join(' · ');
+  return `<div class="shop" onclick="nav('shop',{id:'${s.id}'})">
+    <div class="logo">${s.emoji}<div class="bk">${s.tags.includes('品质联盟')?'品质联盟':'销量No.'+(SHOPS.indexOf(s)+1)}</div></div>
+    <div class="gr">
+      <div class="f15 b6 el">${s.name}</div>
+      <div class="row mt6" style="gap:5px">
+        <span class="stars">${stars(s.rate)}</span>
+        <span class="f11 b6" style="color:#FF8000">${s.rate}</span>
+        <span class="f11 c3">月售${s.sales>999?(s.sales/1000).toFixed(1)+'k':s.sales}</span>
+        <span class="f11 c3">|</span>
+        <span class="f11 c3">${s.mins}分钟 · ${s.dist}km</span>
+      </div>
+      <div class="row mt6" style="gap:4px">
+        <span class="f11 c3">起送¥${s.min}</span><span class="f11 c3">|</span>
+        <span class="f11 c3">配送¥${s.fee}</span>
+        ${s.tags.slice(0,2).map(t=>`<span class="tag ${t==='品质联盟'?'b':'g'}">${t}</span>`).join('')}
+      </div>
+      ${promo?`<div class="promoline"><span style="background:var(--brand);color:#fff;border-radius:3px;padding:0 3px;font-size:9px">减</span>${promo}</div>`:''}
+    </div>
+  </div>`;
+}
+function tabbarHTML(cur){
+  const ing = S.orders.filter(o=>o.step<4).length;
+  const it=(id,i,t)=>`<div class="it ${cur===id?'on':''}" onclick="tabTo('${id}')"><span class="i">${i}</span>${t}${id==='orders'&&ing?`<span class="bd">${ing}</span>`:''}</div>`;
+  return `<div class="tabbar">${it('home','🏠','首页')}${it('orders','📋','订单')}${it('me','👤','我的')}</div>`;
+}
+function setSort(x){ S.filter.sort=x; SCREENS.home.mount({}); }
+function toggleOnly(x){
+  const i=S.filter.only.indexOf(x); i>-1?S.filter.only.splice(i,1):S.filter.only.push(x);
+  SCREENS.home.mount({});
+}
+function catTap(name){ nav('search',{kw:name}); }
+let clkT;
+function startClock(){
+  clearInterval(clkT);
+  let left = 2*3600+43*60+12;
+  const tick=()=>{
+    const el=$('#clk'); if(!el){clearInterval(clkT);return;}
+    left = left>0?left-1:0;
+    const h=String(Math.floor(left/3600)).padStart(2,'0'),
+          m=String(Math.floor(left%3600/60)).padStart(2,'0'),
+          s=String(left%60).padStart(2,'0');
+    el.textContent=`${h}:${m}:${s}`;
+  };
+  tick(); clkT=setInterval(tick,1000);
+}
+
+/* =======================================================================
+   搜索
+   ======================================================================= */
+defScreen('search', function(d){
+  SCREENS.search.data = d;
+  const kw = d.kw||'';
+  const res = kw ? SHOPS.filter(s=>{
+    if(s.name.includes(kw)) return true;
+    return s.menu.some(c=>c.items.some(i=>i.name.includes(kw)||c.cat.includes(kw)));
+  }) : [];
+  const dishHits = kw ? SHOPS.flatMap(s=>s.menu.flatMap(c=>c.items.filter(i=>i.name.includes(kw)).map(i=>({s,i})))) : [];
+  this.el.innerHTML = `
+  <div class="nav">
+    <div class="ic" onclick="back()">‹</div>
+    <div class="searchbar" style="flex:1;margin:0;box-shadow:none;background:#F5F6F8">
+      <span style="font-size:14px;margin-right:6px">🔍</span>
+      <input class="tf" id="kwIn" style="text-align:left" placeholder="搜索店铺或菜品" value="${kw}">
+    </div>
+    <div class="f14 cb b6" style="padding:0 4px" onclick="doSearch()">搜索</div>
+  </div>
+  <div class="body">
+    ${!kw ? `
+      <div class="card">
+        <div class="f13 b6">🔥 大家都在搜</div>
+        <div class="row" style="flex-wrap:wrap;gap:8px;margin-top:11px">
+          ${HOTWORDS.map(w=>`<div class="chip" onclick="nav('search',{kw:'${w}'})">${w}</div>`).join('')}
+        </div>
+      </div>
+      <div class="card">
+        <div class="row sp"><div class="f13 b6">🕘 历史搜索</div><span class="f12 c3">清空</span></div>
+        <div class="row" style="flex-wrap:wrap;gap:8px;margin-top:11px">
+          ${['麻辣香锅','芋泥波波','卤蛋'].map(w=>`<div class="chip" onclick="nav('search',{kw:'${w}'})">${w}</div>`).join('')}
+        </div>
+      </div>` : `
+      ${dishHits.length?`<div class="f12 c3" style="padding:12px 14px 0">相关菜品 ${dishHits.length}</div>`:''}
+      ${dishHits.slice(0,4).map(({s,i})=>`
+        <div class="card row" style="gap:11px" onclick="nav('shop',{id:'${s.id}'})">
+          <div class="thumb" style="width:56px;height:56px;font-size:27px">${i.emoji}</div>
+          <div class="gr"><div class="f14 b6 el">${i.name}</div>
+            <div class="f11 c3 mt6 el">${s.name}</div>
+            <div class="price mt6"><i>¥</i>${money(i.price)}</div></div>
+          <div class="specbtn">去点餐</div>
+        </div>`).join('')}
+      ${res.length?`<div class="f12 c3" style="padding:12px 14px 0">相关店铺 ${res.length}</div>`:''}
+      ${res.map(shopCardHTML).join('')}
+      ${!res.length&&!dishHits.length?`<div class="empty"><span class="e">🔍</span>没有找到"${kw}"相关结果<br>换个关键词试试</div>`:''}
+    `}
+  </div>`;
+});
+function doSearch(){
+  const v = $('#kwIn').value.trim();
+  if(!v){ toast('请输入搜索内容'); return; }
+  nav('search',{kw:v});
+}
+
+/* =======================================================================
+   店铺详情（点餐）
+   ======================================================================= */
+let curCatIdx = 0;
+defScreen('shop', function(d){
+  SCREENS.shop.data = d;
+  const s = findShop(d.id);
+  if(d.reset) curCatIdx = 0;
+  const cnt = S.cart.shopId===s.id ? cartCount() : 0;
+  const sub = S.cart.shopId===s.id ? subtotal() : 0;
+  const diff = s.min - sub;
+  const promo = bestPromo(s, sub);
+
+  this.el.innerHTML = `
+  <div class="shophead">
+    <div class="bgm">${s.head}</div>
+    <div class="nb">
+      <div class="ic" onclick="back()">‹</div>
+      <div class="gr f15 b6 el" style="color:#fff">${s.name}</div>
+      <div class="ic" onclick="toast('已收藏该店铺')">♡</div>
+      <div class="ic" onclick="toast('分享面板为原型占位')">⇪</div>
+    </div>
+  </div>
+  <div class="shopinfo">
+    <div class="row">
+      <div class="logo" style="width:52px;height:52px;font-size:26px;background:linear-gradient(140deg,#FFF3E8,#FFD9BE)">${s.emoji}</div>
+      <div class="gr">
+        <div class="f15 b7 el">${s.name}</div>
+        <div class="row mt6" style="gap:5px">
+          <span class="stars">${stars(s.rate)}</span><span class="f11 b6" style="color:#FF8000">${s.rate}</span>
+          <span class="f11 c3">月售${s.sales}</span><span class="f11 c3">|</span>
+          <span class="f11 c3">${s.mins}分钟送达 · ${s.dist}km</span>
+        </div>
+      </div>
+      <div class="c3" style="font-size:18px" onclick="shopInfoSheet('${s.id}')">›</div>
+    </div>
+    ${s.notice?`<div class="f11 c2 mt10 el" style="background:#FAFAFA;border-radius:6px;padding:6px 8px">📣 ${s.notice}</div>`:''}
+    <div class="coupbox">
+      ${(s.promos||[]).map(([n,a])=>`<span class="tag o" style="padding:3px 7px;font-size:10.5px">满${n}减${a}</span>`).join('')}
+      ${(s.coupons||[]).map(c=>{
+        const got = S.gotCoupons.includes(c.id);
+        return `<div class="coup ${got?'got':''}" onclick="getCoupon('${c.id}','${s.id}')">${c.txt} ${got?'已领':'领取'}</div>`;
+      }).join('')}
+    </div>
+  </div>
+
+  <div class="menuwrap">
+    <div class="catcol">
+      ${s.menu.map((c,i)=>{
+        const n = c.items.reduce((a,it)=> a + (S.cart.shopId===s.id?cartQtyOf(it.id):0), 0);
+        return `<div class="c ${i===curCatIdx?'on':''}" onclick="pickCat(${i})">${c.cat}${n?`<span class="n">${n}</span>`:''}</div>`;
+      }).join('')}
+    </div>
+    <div class="itemcol" id="itemcol">
+      <div class="f13 b6" style="padding:13px 0 2px;color:var(--txt2)">${s.menu[curCatIdx].cat}</div>
+      ${s.menu[curCatIdx].items.map(it=>dishHTML(s,it)).join('')}
+      <div class="c3 f11" style="text-align:center;padding:16px 0">— 已加载全部 ${s.menu[curCatIdx].items.length} 个商品 —</div>
+    </div>
+  </div>
+
+  <div class="cartbar">
+    <div class="cartbtn ${cnt?'':'off'}" onclick="${cnt?'openCartSheet()':`toast('购物车还是空的')`}">
+      🛒 ${cnt?`<span class="bd">${cnt}</span>`:''}
+    </div>
+    <div class="gr">
+      ${cnt?`<div class="price f17"><i>¥</i>${money(sub)}</div>
+             <div class="f11 c3">${promo.amt?`已减¥${promo.amt} · `:''}另需配送费¥${s.fee}</div>`
+           :`<div class="f13 c3">购物车是空的</div><div class="f11 c3">¥${s.min} 起送</div>`}
+    </div>
+    ${cnt
+      ? (diff>0
+          ? `<div class="gobtn dis">还差¥${money(diff)}起送</div>`
+          : `<div class="gobtn" onclick="goCheckout()">去结算</div>`)
+      : `<div class="gobtn dis">¥${s.min}起送</div>`}
+  </div>`;
+});
+function dishHTML(s,it){
+  const q = S.cart.shopId===s.id ? cartQtyOf(it.id) : 0;
+  const hasOpt = (it.specs&&it.specs.length) || (it.addons&&it.addons.length);
+  return `<div class="dish">
+    <div class="thumb">${it.emoji}</div>
+    <div class="gr" style="display:flex;flex-direction:column">
+      <div class="f14 b6">${it.name}</div>
+      ${it.desc?`<div class="f11 c3 mt6 el2">${it.desc}</div>`:''}
+      <div class="f11 c3 mt6">月售${it.sales} · 好评${it.praise}%</div>
+      <div class="op mt6">
+        <div>
+          <span class="price f15"><i>¥</i>${money(it.price)}</span>
+          ${it.orig?`<span class="through">¥${money(it.orig)}</span>`:''}
+          ${hasOpt?`<div class="f11 c3" style="margin-top:2px">${it.specs.length?'可选规格':''}${it.specs.length&&it.addons.length?' · ':''}${it.addons.length?'可加料':''}</div>`:''}
+        </div>
+        ${hasOpt
+          ? `<div class="row" style="gap:8px">${q?`<span class="f12 cb b6">×${q}</span>`:''}<div class="specbtn" onclick="openSpec('${s.id}','${it.id}')">选规格</div></div>`
+          : (q
+             ? `<div class="stepper"><div class="m" onclick="changeQty('${it.id}|',-1)">−</div><div class="n">${q}</div><div class="p" onclick="addToCart('${s.id}','${it.id}',[],[],1)">＋</div></div>`
+             : `<div class="stepper"><div class="p" onclick="addToCart('${s.id}','${it.id}',[],[],1)">＋</div></div>`)}
+      </div>
+    </div>
+  </div>`;
+}
+function pickCat(i){ curCatIdx=i; SCREENS.shop.mount(SCREENS.shop.data); }
+function getCoupon(cid, sid){
+  if(S.gotCoupons.includes(cid)){ toast('该券已领取，结算时可用'); return; }
+  S.gotCoupons.push(cid); toast('🎉 领取成功，结算时自动可用');
+  SCREENS.shop.mount(SCREENS.shop.data);
+}
+function shopInfoSheet(sid){
+  const s = findShop(sid);
+  openSheet('商家信息',`
+    <div class="f13" style="line-height:2.1;padding-bottom:18px">
+      <div class="row sp"><span class="c3">店铺名称</span><span class="b6">${s.name}</span></div>
+      <div class="row sp"><span class="c3">评分 / 月售</span><span>${s.rate} / ${s.sales}</span></div>
+      <div class="row sp"><span class="c3">配送</span><span>${s.mins}分钟 · ¥${s.fee} · 起送¥${s.min}</span></div>
+      <div class="row sp"><span class="c3">距离</span><span>${s.dist}km</span></div>
+      <div class="row sp"><span class="c3">营业时间</span><span>09:00 - 22:00</span></div>
+      <div class="row sp"><span class="c3">服务</span><span>${s.tags.join(' / ')}</span></div>
+      <div class="divider"></div>
+      <div class="c3 f12">地址：上海市杨浦区淞沪路 388 号 1F-0${SHOPS.indexOf(s)+2}</div>
+      <div class="c3 f12">商家公告：${s.notice||'暂无'}</div>
+    </div>`);
+}
+
+/* ---------- 规格 / 加料弹层 ---------- */
+let specState = null;
+function openSpec(sid, iid){
+  const it = findItem(sid, iid);
+  specState = {sid, iid, spec: it.specs.map(()=>0), addons: [], qty:1};
+  renderSpec();
+}
+function renderSpec(){
+  const {sid,iid} = specState;
+  const it = findItem(sid,iid);
+  let unit = it.price;
+  it.specs.forEach((g,gi)=> unit += g.opts[specState.spec[gi]][1]);
+  specState.addons.forEach(ai=> unit += it.addons[ai][1]);
+  const body = `
+    <div class="row" style="gap:11px;padding-bottom:14px;border-bottom:1px solid var(--line)">
+      <div class="thumb" style="width:62px;height:62px;font-size:30px">${it.emoji}</div>
+      <div class="gr"><div class="f15 b6">${it.name}</div>
+        <div class="f11 c3 mt6">月售${it.sales} · 好评${it.praise}%</div>
+        <div class="price f17 mt6"><i>¥</i>${money(it.price)} <span class="f11 c3" style="font-weight:400">起</span></div>
+      </div>
+    </div>
+    <div style="padding-top:16px">
+    ${it.specs.map((g,gi)=>`
+      <div class="optgrp">
+        <div class="gn">${g.name}<em>${g.required?'必选 · 单选':'单选'}</em></div>
+        <div class="opts">
+          ${g.opts.map((o,oi)=>`<div class="opt ${specState.spec[gi]===oi?'on':''}" onclick="pickSpec(${gi},${oi})">${o[0]}${o[1]?` +¥${money(o[1])}`:''}</div>`).join('')}
+        </div>
+      </div>`).join('')}
+    ${it.addons.length?`
+      <div class="optgrp">
+        <div class="gn">加料<em>可多选，按份计价</em></div>
+        <div class="opts">
+          ${it.addons.map((a,ai)=>`<div class="opt ${specState.addons.includes(ai)?'on':''}" onclick="pickAddon(${ai})">${a[0]}${a[1]?` +¥${money(a[1])}`:''}</div>`).join('')}
+        </div>
+      </div>`:''}
+    </div>`;
+  const foot = `
+    <div class="row sp">
+      <div>
+        <div class="price f17"><i>¥</i>${money(unit*specState.qty)}</div>
+        <div class="f11 c3">单份 ¥${money(unit)}</div>
+      </div>
+      <div class="stepper" style="gap:11px">
+        <div class="m" onclick="specQty(-1)">−</div><div class="n f15">${specState.qty}</div><div class="p" onclick="specQty(1)">＋</div>
+      </div>
+      <div class="gobtn" style="height:40px" onclick="confirmSpec()">加入购物车</div>
+    </div>`;
+  openSheet('选择规格', body, foot);
+}
+function pickSpec(gi,oi){ specState.spec[gi]=oi; renderSpec(); }
+function pickAddon(ai){
+  const i = specState.addons.indexOf(ai);
+  i>-1?specState.addons.splice(i,1):specState.addons.push(ai);
+  renderSpec();
+}
+function specQty(d){ specState.qty=Math.max(1,specState.qty+d); renderSpec(); }
+function confirmSpec(){
+  const {sid,iid,qty} = specState;
+  const it = findItem(sid,iid);
+  const specs = it.specs.map((g,gi)=>({label:g.opts[specState.spec[gi]][0], delta:g.opts[specState.spec[gi]][1]}));
+  const addons = specState.addons.map(ai=>({label:it.addons[ai][0], price:it.addons[ai][1]}));
+  closeSheet();
+  addToCart(sid,iid,specs,addons,qty);
+  toast(`已加入购物车 ×${qty}`);
+}
+
+/* ---------- 购物车浮层 ---------- */
+function openCartSheet(){
+  const s = findShop(S.cart.shopId);
+  const sub = subtotal(), promo = bestPromo(s, sub), diff = s.min - sub;
+  const body = `
+    <div style="padding-bottom:10px">
+      ${S.cart.items.map(i=>`
+        <div class="row" style="padding:12px 0;border-bottom:1px solid #F7F7F7;gap:10px">
+          <div class="thumb" style="width:48px;height:48px;font-size:24px">${i.emoji}</div>
+          <div class="gr">
+            <div class="f14 b6 el">${i.name}</div>
+            ${i.desc?`<div class="f11 c3 mt6 el">${i.desc}</div>`:''}
+            <div class="price mt6"><i>¥</i>${money(i.unit*i.qty)}</div>
+          </div>
+          <div class="stepper">
+            <div class="m" onclick="changeQty('${i.key}',-1)">−</div>
+            <div class="n">${i.qty}</div>
+            <div class="p" onclick="changeQty('${i.key}',1)">＋</div>
+          </div>
+        </div>`).join('')}
+      <div class="row sp f12 c3" style="padding:11px 0">
+        <span>包装费</span><span>¥${money(packFee())}</span>
+      </div>
+      <div class="row sp f12" style="padding-bottom:11px">
+        <span class="cb">满减优惠</span><span class="cb">${promo.amt?`-¥${money(promo.amt)}（${promo.txt}）`:'暂未满足'}</span>
+      </div>
+    </div>`;
+  const foot = `
+    <div class="row sp">
+      <div><div class="price f17"><i>¥</i>${money(sub+packFee()-promo.amt)}</div>
+      <div class="f11 c3">配送费 ¥${s.fee}，结算页可用券</div></div>
+      ${diff>0?`<div class="gobtn dis">还差¥${money(diff)}起送</div>`
+              :`<div class="gobtn" onclick="closeSheet();goCheckout()">去结算</div>`}
+    </div>
+    <div class="f11 c3" style="text-align:center;margin-top:9px" onclick="clearCart()">🗑 清空购物车</div>`;
+  openSheet(`购物车 · ${findShop(S.cart.shopId).name.slice(0,10)}`, body, foot);
+}
+function clearCart(){
+  confirmBox('清空购物车','确定要清空购物车中的全部商品吗？','清空',()=>{
+    S.cart={shopId:null,items:[]}; closeSheet(); refreshShop(); toast('购物车已清空');
+  });
+}
+
+/* =======================================================================
+   确认订单（结算）
+   ======================================================================= */
+function goCheckout(){
+  S.checkout.couponId = null;
+  // 自动选最优券
+  const c = calc();
+  const list = availCoupons(c.shop, c.sub).filter(x=>x.usable).sort((a,b)=>b.amt-a.amt);
+  if(list.length) S.checkout.couponId = list[0].id;
+  nav('checkout');
+}
+defScreen('checkout', function(){
+  const c = calc();
+  const addr = S.addr.find(a=>a.id===S.addrSel);
+  const usable = availCoupons(c.shop, c.sub).filter(x=>x.usable).length;
+  this.el.innerHTML = `
+  <div class="nav"><div class="ic" onclick="back()">‹</div><div class="t">确认订单</div><div class="ic"></div></div>
+  <div class="body">
+    <div class="card" onclick="nav('addr')">
+      <div class="row">
+        <div class="gr">
+          ${addr?`<div class="row" style="gap:6px"><span class="f17 b7">${addr.addr}</span></div>
+            <div class="f12 c2 mt6">${addr.detail}</div>
+            <div class="f13 mt6">${addr.name} ${addr.phone} <span class="tag o">${addr.tag}</span></div>`
+          :`<div class="f15 b6">请选择收货地址</div>`}
+        </div>
+        <div class="c3" style="font-size:18px">›</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="deliverytabs">
+        ${[['std','标准配送'],['fast','准时达 +¥1.5'],['self','到店自取']].map(([k,t])=>
+          `<div class="d ${c.mode===k?'on':''}" onclick="setMode('${k}')">${t}</div>`).join('')}
+      </div>
+      <div class="line" onclick="timeSheet()">
+        <span>${c.mode==='self'?'自取时间':'送达时间'}</span>
+        <span class="lv">${timeText()} <b class="c3">›</b></span>
+      </div>
+      ${c.mode==='fast'?`<div class="f11 cb" style="padding-bottom:10px">⏱ 准时达：超时未送达，最高赔付 ¥15 无门槛券</div>`:''}
+      ${c.mode==='self'?`<div class="f11 cg" style="padding-bottom:10px">🏪 自取免配送费，到店出示取餐码即可</div>`:''}
+    </div>
+
+    <div class="card">
+      <div class="row sp" style="padding-bottom:10px;border-bottom:1px solid var(--line)">
+        <div class="row" style="gap:8px"><span style="font-size:17px">${c.shop.emoji}</span><span class="f15 b6 el">${c.shop.name}</span></div>
+        <span class="f12 c3" onclick="nav('shop',{id:'${c.shop.id}'})">再点一些 ›</span>
+      </div>
+      ${S.cart.items.map(i=>`
+        <div class="row" style="padding:11px 0;gap:10px">
+          <div class="thumb" style="width:44px;height:44px;font-size:22px">${i.emoji}</div>
+          <div class="gr"><div class="f13 b6 el">${i.name}</div>
+          ${i.desc?`<div class="f11 c3 el" style="margin-top:3px">${i.desc}</div>`:''}</div>
+          <div class="tr"><div class="f13 b6">¥${money(i.unit*i.qty)}</div><div class="f11 c3">×${i.qty}</div></div>
+        </div>`).join('')}
+      <div class="divider"></div>
+      <div class="line"><span class="f13 c2">商品小计</span><span class="lv">¥${money(c.sub)}</span></div>
+      <div class="line"><span class="f13 c2">包装费</span><span class="lv">¥${money(c.pack)}</span></div>
+      <div class="line"><span class="f13 c2">配送费</span><span class="lv">${c.fee?`¥${money(c.fee)}`:'免配送费'}</span></div>
+      ${c.promo.amt?`<div class="line"><span class="f13 cb">店铺满减（${c.promo.txt}）</span><span class="lv cb">-¥${money(c.promo.amt)}</span></div>`:''}
+      <div class="line" onclick="nav('coupon')">
+        <span class="f13">优惠券</span>
+        <span class="lv ${c.cpAmt?'cb':''}">${c.cpAmt?`-¥${money(c.cpAmt)}（${c.cp.txt}）`:(usable?`${usable}张可用`:'无可用券')} <b class="c3">›</b></span>
+      </div>
+      <div class="line"><span class="f13 cb">新客立减</span><span class="lv cb">-¥${money(c.newUser)}</span></div>
+      <div class="divider"></div>
+      <div class="row sp">
+        <span class="f12 c3">已优惠 ¥${money(c.saved)}</span>
+        <span class="f13">小计 <span class="price f17"><i>¥</i>${money(c.total)}</span></span>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="line" onclick="twSheet()"><span>餐具份数</span><span class="lv">${S.checkout.tableware===0?'无需餐具（环保）':S.checkout.tableware+' 份'} <b class="c3">›</b></span></div>
+      <div class="line" onclick="noteSheet()"><span>订单备注</span><span class="lv el" style="max-width:60%">${S.checkout.note||'口味、偏好等要求'} <b class="c3">›</b></span></div>
+      <div class="line" onclick="toggleInvoice()"><span>发票</span><span class="lv">${S.checkout.invoice?'需要 · 电子普票':'不需要'} <b class="c3">›</b></span></div>
+      <div class="line" onclick="payWaySheet()"><span>支付方式</span><span class="lv">${payName()} <b class="c3">›</b></span></div>
+    </div>
+
+    <div class="f11 c3" style="padding:4px 16px 20px;line-height:1.8">
+      提交订单表示同意《用户下单协议》与《配送服务说明》。本原型不会真实扣款或产生真实订单。
+    </div>
+  </div>
+  <div class="paybar">
+    <div class="gr">
+      <div class="row" style="gap:4px;align-items:baseline">
+        <span class="f12 c2">待支付</span>
+        <span class="price" style="font-size:22px"><i>¥</i>${money(c.total)}</span>
+      </div>
+      <div class="f11 cb">已优惠 ¥${money(c.saved)}</div>
+    </div>
+    <div class="btn" style="width:130px;height:44px" onclick="submitOrder()">提交订单</div>
+  </div>`;
+});
+function setMode(m){ S.checkout.mode=m; SCREENS.checkout.mount({}); }
+function payName(){ return {wx:'微信支付',ali:'支付宝',card:'银行卡 **** 6411',cod:'货到付款'}[S.checkout.pay]; }
+function timeSheet(){
+  openSheet(S.checkout.mode==='self'?'选择自取时间':'选择送达时间',
+    `<div style="padding-bottom:16px">${TIMESLOTS.map((t,i)=>
+      `<div class="line" onclick="pickTime(${i})"><span>${t.replace('%s',findShop(S.cart.shopId).mins)}</span>
+       <span class="radio ${S.checkout.timeIdx===i?'on':''}">✓</span></div>`).join('')}</div>`);
+}
+function pickTime(i){ S.checkout.timeIdx=i; closeSheet(); SCREENS.checkout.mount({}); }
+function twSheet(){
+  openSheet('餐具份数',
+    `<div style="padding-bottom:16px">${[0,1,2,3,4,5].map(n=>
+      `<div class="line" onclick="pickTW(${n})"><span>${n===0?'无需餐具（为环保出力）':n+' 份'}</span>
+       <span class="radio ${S.checkout.tableware===n?'on':''}">✓</span></div>`).join('')}</div>`);
+}
+function pickTW(n){ S.checkout.tableware=n; closeSheet(); SCREENS.checkout.mount({}); }
+function noteSheet(){
+  openSheet('订单备注',
+    `<div style="padding-bottom:8px">
+      <div class="row" style="flex-wrap:wrap;gap:8px;margin-bottom:12px">
+        ${['不要辣','少放盐','多加醋','不要香菜','请敲门','放门口即可'].map(t=>`<div class="chip" onclick="addNote('${t}')">${t}</div>`).join('')}
+      </div>
+      <textarea id="noteIn" placeholder="填写备注，商家会尽量满足（最多50字）">${S.checkout.note}</textarea>
+    </div>`,
+    `<div class="btn" onclick="saveNote()">确定</div>`);
+}
+function addNote(t){
+  const el=$('#noteIn'); const v=el.value;
+  el.value = v ? (v.includes(t)?v:v+'、'+t) : t;
+}
+function saveNote(){ S.checkout.note=$('#noteIn').value.trim(); closeSheet(); SCREENS.checkout.mount({}); }
+function toggleInvoice(){ S.checkout.invoice=!S.checkout.invoice; SCREENS.checkout.mount({}); toast(S.checkout.invoice?'已选择开具电子普通发票':'已取消开票'); }
+function payWaySheet(){
+  const ways=[['wx','微信支付','💬','#07C160','推荐'],['ali','支付宝','🅰️','#1677FF','可用花呗'],
+              ['card','银行卡 **** 6411','💳','#3A5A9B',''],['cod','货到付款','💵','#8C8C8C','部分商家支持']];
+  openSheet('选择支付方式',
+    `<div style="padding-bottom:16px">${ways.map(([k,n,i,c,tip])=>`
+      <div class="payway" onclick="pickPay('${k}')">
+        <div class="pi" style="background:${c}">${i}</div>
+        <div class="gr"><div class="f14">${n}</div>${tip?`<div class="f11 c3" style="margin-top:2px">${tip}</div>`:''}</div>
+        <span class="radio ${S.checkout.pay===k?'on':''}">✓</span>
+      </div>`).join('')}
+      <div class="f11 c3" style="padding-top:12px;line-height:1.7">⚠️ 原型演示环境：不会调起真实支付，也不会发生任何真实扣款。</div>
+    </div>`);
+}
+function pickPay(k){ S.checkout.pay=k; closeSheet(); SCREENS.checkout.mount({}); }
+
+/* ---------- 地址 ---------- */
+defScreen('addr', function(){
+  this.el.innerHTML = `
+  <div class="nav"><div class="ic" onclick="back()">‹</div><div class="t">收货地址</div><div class="ic"></div></div>
+  <div class="body">
+    <div class="f12 c3" style="padding:14px 16px 0">附近地址</div>
+    ${S.addr.map(a=>`
+      <div class="card row" onclick="pickAddr('${a.id}')">
+        <div class="gr">
+          <div class="row" style="gap:6px"><span class="f15 b6 el">${a.addr}</span><span class="tag o">${a.tag}</span></div>
+          <div class="f12 c3 mt6">${a.detail}</div>
+          <div class="f12 c2 mt6">${a.name} ${a.phone}</div>
+        </div>
+        <div class="row" style="gap:10px">
+          <span class="radio ${S.addrSel===a.id?'on':''}">✓</span>
+          <span class="c3 f13" onclick="event.stopPropagation();editAddr('${a.id}')">编辑</span>
+        </div>
+      </div>`).join('')}
+    <div class="card" style="text-align:center;color:var(--brand);font-weight:600" onclick="editAddr()">＋ 新增收货地址</div>
+    <div class="f11 c3" style="padding:6px 16px">地址仅保存在本页面内存中，刷新即恢复默认。</div>
+  </div>`;
+});
+function pickAddr(id){ S.addrSel=id; back(); toast('已切换收货地址'); }
+function editAddr(id){
+  const a = id? S.addr.find(x=>x.id===id) : {name:'',phone:'',addr:'',detail:'',tag:'家'};
+  openSheet(id?'编辑地址':'新增地址',
+   `<div style="padding-bottom:10px">
+      <div class="line"><span>联系人</span><input class="tf" id="fName" placeholder="收货人姓名" value="${a.name}"></div>
+      <div class="line"><span>手机号</span><input class="tf" id="fPhone" placeholder="11位手机号" value="${a.phone}"></div>
+      <div class="line"><span>小区/写字楼</span><input class="tf" id="fAddr" placeholder="如 创智天地3号楼" value="${a.addr}"></div>
+      <div class="line"><span>门牌号</span><input class="tf" id="fDetail" placeholder="如 12F 研发部" value="${a.detail}"></div>
+      <div class="row sp" style="padding:13px 0"><span class="f14">标签</span>
+        <div class="row" style="gap:8px" id="tagRow">
+          ${['家','公司','学校','其他'].map(t=>`<div class="chip ${a.tag===t?'on':''}" onclick="pickTag(this)">${t}</div>`).join('')}
+        </div>
+      </div>
+    </div>`,
+   `<div class="btn" onclick="saveAddr('${id||''}')">保存地址</div>`);
+}
+function pickTag(el){ el.parentNode.querySelectorAll('.chip').forEach(c=>c.classList.remove('on')); el.classList.add('on'); }
+function saveAddr(id){
+  const name=$('#fName').value.trim(), phone=$('#fPhone').value.trim(),
+        addr=$('#fAddr').value.trim(), detail=$('#fDetail').value.trim(),
+        tag=$('#tagRow .chip.on')?$('#tagRow .chip.on').textContent:'家';
+  if(!name||!phone||!addr){ toast('请填写联系人、手机号和地址'); return; }
+  if(id){ Object.assign(S.addr.find(x=>x.id===id),{name,phone,addr,detail,tag}); }
+  else { const nid='a'+(S.addr.length+1); S.addr.push({id:nid,name,phone,addr,detail,tag,def:false}); S.addrSel=nid; }
+  closeSheet(); SCREENS.addr.mount({}); toast('地址已保存');
+}
+
+/* ---------- 优惠券选择 ---------- */
+defScreen('coupon', function(){
+  const c = calc();
+  const list = availCoupons(c.shop, c.sub);
+  const ok = list.filter(x=>x.usable), no = list.filter(x=>!x.usable);
+  const card = (x,usable)=>`
+    <div class="card row" style="gap:0;padding:0;overflow:hidden;${usable?'':'opacity:.5'}" onclick="${usable?`pickCoupon('${x.id}')`:`toast('未满足使用门槛')`}">
+      <div style="width:104px;background:linear-gradient(160deg,#FF7A45,#FF5A1F);color:#fff;padding:16px 8px;text-align:center">
+        <div style="font-size:26px;font-weight:700">¥${x.amt}</div>
+        <div class="f11" style="opacity:.9">满${x.need}可用</div>
+      </div>
+      <div class="gr" style="padding:14px">
+        <div class="f14 b6">${x.txt}</div>
+        <div class="f11 c3 mt6">${x.kind} · ${x.exp?'有效期至 '+x.exp:'本单可用'}</div>
+        ${!usable?`<div class="f11" style="color:var(--red);margin-top:5px">还差 ¥${money(x.need-c.sub)} 可用</div>`:''}
+      </div>
+      <div style="padding-right:14px"><span class="radio ${S.checkout.couponId===x.id?'on':''}">✓</span></div>
+    </div>`;
+  this.el.innerHTML = `
+  <div class="nav"><div class="ic" onclick="back()">‹</div><div class="t">选择优惠券</div><div class="ic"></div></div>
+  <div class="body">
+    <div class="f12 c3" style="padding:14px 16px 0">可用（${ok.length}）· 优惠券不与满减冲突，可叠加</div>
+    ${ok.map(x=>card(x,true)).join('') || `<div class="empty"><span class="e">🎟️</span>当前订单暂无可用券</div>`}
+    ${no.length?`<div class="f12 c3" style="padding:14px 16px 0">不可用（${no.length}）</div>${no.map(x=>card(x,false)).join('')}`:''}
+    <div class="card" style="text-align:center;color:var(--txt2)" onclick="pickCoupon('')">不使用优惠券</div>
+  </div>`;
+});
+function pickCoupon(id){ S.checkout.couponId = id||null; back(); }
+
+/* =======================================================================
+   支付
+   ======================================================================= */
+let pwd = '';
+function submitOrder(){
+  const addr = S.addr.find(a=>a.id===S.addrSel);
+  if(!addr && S.checkout.mode!=='self'){ toast('请先选择收货地址'); return; }
+  if(S.checkout.pay==='cod'){
+    confirmBox('确认下单','当前为货到付款，订单将直接发送给商家。','确认下单',()=>doPaid());
+    return;
+  }
+  pwd=''; nav('pay');
+}
+defScreen('pay', function(){
+  const c = calc();
+  this.el.innerHTML = `
+  <div class="nav" style="background:transparent;border:none;position:absolute;left:0;right:0;top:0;z-index:5">
+    <div class="ic" onclick="back()" style="color:#fff">✕</div>
+  </div>
+  <div class="body" style="background:linear-gradient(175deg,#FF5A1F,#FF8347 40%,#F5F6F8 40.1%);padding:0">
+    <div style="padding:56px 16px 26px;color:#fff;text-align:center">
+      <div class="f13" style="opacity:.9">${payName()}</div>
+      <div style="font-size:38px;font-weight:700;margin-top:8px">¥${money(c.total)}</div>
+      <div class="f12" style="opacity:.9;margin-top:6px">${c.shop.name}</div>
+    </div>
+    <div class="card" style="margin-top:0">
+      <div class="line"><span class="c2 f13">收款方</span><span class="lv">${c.shop.name}</span></div>
+      <div class="line"><span class="c2 f13">商品金额</span><span class="lv">¥${money(c.sub+c.pack+c.fee)}</span></div>
+      <div class="line"><span class="c2 f13">优惠合计</span><span class="lv cb">-¥${money(c.saved)}</span></div>
+      <div class="line"><span class="c2 f13">支付方式</span><span class="lv">${payName()}</span></div>
+    </div>
+    <div class="card">
+      <div class="f14 b6" style="text-align:center">请输入支付密码</div>
+      <div class="f11 c3" style="text-align:center;margin-top:5px">演示环境 · 任意 6 位数字即可，不会真实扣款</div>
+      <div class="pwd" id="pwdBox">${Array(6).fill(0).map(()=>'<div class="d"></div>').join('')}</div>
+      <div class="f11 c3" style="text-align:center">忘记密码？</div>
+    </div>
+  </div>
+  <div class="keypad">
+    ${[1,2,3,4,5,6,7,8,9].map(n=>`<div class="k" onclick="key(${n})">${n}</div>`).join('')}
+    <div class="k gray" onclick="toast('演示环境不支持其他支付方式切换')">切换</div>
+    <div class="k" onclick="key(0)">0</div>
+    <div class="k gray" onclick="key(-1)">⌫</div>
+  </div>`;
+});
+function key(n){
+  if(n===-1){ pwd = pwd.slice(0,-1); }
+  else if(pwd.length<6){ pwd += n; }
+  const box=$('#pwdBox'); if(!box) return;
+  box.querySelectorAll('.d').forEach((d,i)=> d.textContent = i<pwd.length?'●':'');
+  if(pwd.length===6) setTimeout(()=>{ nav('paying'); }, 180);
+}
+defScreen('paying', function(){
+  this.el.innerHTML = `
+  <div class="body" style="display:flex;align-items:center;justify-content:center;background:#fff">
+    <div style="text-align:center">
+      <div class="spin"></div>
+      <div class="f14 c2" style="margin-top:18px">支付处理中…</div>
+      <div class="f11 c3" style="margin-top:6px">正在通知商家接单</div>
+    </div>
+  </div>`;
+  setTimeout(()=>{ if(stack[stack.length-1]==='paying') doPaid(); }, 1700);
+});
+
+/* ---------- 生成订单 ---------- */
+function doPaid(){
+  const c = calc();
+  const no = 'SD' + Date.now().toString().slice(-10);
+  const order = {
+    no, shopId: c.shop.id, shopName: c.shop.name, shopEmoji: c.shop.emoji,
+    items: JSON.parse(JSON.stringify(S.cart.items)),
+    sub:c.sub, pack:c.pack, fee:c.fee, promo:c.promo, cp:c.cp, cpAmt:c.cpAmt,
+    newUser:c.newUser, total:c.total, saved:c.saved,
+    mode:c.mode, addr:S.addr.find(a=>a.id===S.addrSel),
+    time:timeText(), note:S.checkout.note, tableware:S.checkout.tableware,
+    pay:payName(), placed: nowStr(), step:0, rated:false,
+    eta: c.shop.mins, code: String(Math.floor(1000+Math.random()*9000)),
+    rider:{name:'李师傅',plate:'沪A·骑手 2871',phone:'173****4402'},
+  };
+  S.orders.unshift(order);
+  S.curOrder = order;
+  S.cart = {shopId:null, items:[]};
+  S.checkout.couponId = null; S.checkout.note=''; S.checkout.tableware=0;
+  stack = ['home'];
+  nav('paid');
+}
+function nowStr(){
+  const d = new Date();
+  const p = n=>String(n).padStart(2,'0');
+  return `${d.getFullYear()}-${p(d.getMonth()+1)}-${p(d.getDate())} ${p(d.getHours())}:${p(d.getMinutes())}:${p(d.getSeconds())}`;
+}
+defScreen('paid', function(){
+  const o = S.curOrder;
+  this.el.innerHTML = `
+  <div class="body" style="background:#fff">
+    <div style="padding:80px 16px 0;text-align:center">
+      <div class="okmark">✓</div>
+      <div class="f17 b7" style="margin-top:18px">${o.mode==='self'?'下单成功，等待自取':'支付成功，商家已接单'}</div>
+      <div class="f13 c2" style="margin-top:8px">实付 <span class="price f15">¥${money(o.total)}</span> · 已省 ¥${money(o.saved)}</div>
+      <div class="f12 c3" style="margin-top:6px">订单号 ${o.no}</div>
+    </div>
+    <div class="card" style="margin-top:26px;background:#FFF8F4">
+      <div class="row sp">
+        <div><div class="f12 c2">${o.mode==='self'?'预计可取餐':'预计送达'}</div>
+        <div class="f17 b7 cb" style="margin-top:4px">${o.mode==='self'?'约 '+Math.round(o.eta*0.6)+' 分钟后':o.time.replace('尽快送达（','').replace('）','')}</div></div>
+        <div class="tr"><div class="f12 c2">取餐码</div><div class="f17 b7" style="margin-top:4px">${o.code}</div></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="row" style="gap:10px">
+        <span style="font-size:20px">${o.shopEmoji}</span>
+        <span class="f14 b6 gr el">${o.shopName}</span>
+        <span class="f12 c3">共${o.items.reduce((a,b)=>a+b.qty,0)}件</span>
+      </div>
+      ${o.mode!=='self'?`<div class="divider"></div>
+      <div class="f13">${o.addr.addr} ${o.addr.detail}</div>
+      <div class="f12 c3 mt6">${o.addr.name} ${o.addr.phone}</div>`:''}
+    </div>
+    <div style="padding:16px 16px 30px">
+      <div class="btn" onclick="nav('track',{no:'${o.no}'})">${o.mode==='self'?'查看订单进度':'查看骑手配送进度'}</div>
+      <div class="btn ghost" style="margin-top:11px" onclick="tabTo('home')">返回首页</div>
+    </div>
+    <div class="f11 c3" style="text-align:center;padding-bottom:26px">本订单为原型模拟数据，未产生真实交易</div>
+  </div>`;
+});
+
+/* =======================================================================
+   订单追踪
+   ======================================================================= */
+const STEPS = ['已下单','商家接单','骑手取餐','配送中','已送达'];
+defScreen('track', function(d){
+  SCREENS.track.data = d;
+  const o = S.orders.find(x=>x.no===(d.no||(S.curOrder&&S.curOrder.no)));
+  if(!o) return;
+  S.curOrder = o;
+  const frac = Math.min(1, o.step/4);
+  const self = o.mode==='self';
+  this.el.innerHTML = `
+  <div class="trackhead">
+    <div class="row">
+      <div class="ic" style="color:#fff" onclick="back()">‹</div>
+      <div class="gr f15 b6" style="color:#fff">${o.step>=4?'订单已完成':(self?'自取订单':'配送中的订单')}</div>
+      <div class="f12" style="color:#fff;opacity:.95" onclick="nav('odetail',{no:'${o.no}'})">订单详情 ›</div>
+    </div>
+    <div style="margin-top:16px">
+      <div style="font-size:20px;font-weight:700">${trackTitle(o)}</div>
+      <div class="f12" style="opacity:.92;margin-top:6px">${trackSub(o)}</div>
+    </div>
+  </div>
+
+  ${self?'':`
+  <div class="mapbox">
+    <svg viewBox="0 0 350 190" preserveAspectRatio="none">
+      <rect width="350" height="190" fill="#E9EEF3"/>
+      <g stroke="#fff" stroke-width="9" stroke-linecap="round">
+        <line x1="-10" y1="52" x2="360" y2="46"/><line x1="-10" y1="128" x2="360" y2="134"/>
+        <line x1="86" y1="-10" x2="72" y2="200"/><line x1="238" y1="-10" x2="252" y2="200"/>
+      </g>
+      <g fill="#DDE4EB">
+        <rect x="14" y="62" width="48" height="54" rx="4"/><rect x="100" y="62" width="52" height="24" rx="4"/>
+        <rect x="166" y="60" width="58" height="56" rx="4"/><rect x="100" y="96" width="52" height="22" rx="4"/>
+        <rect x="266" y="60" width="70" height="56" rx="4"/><rect x="14" y="144" width="46" height="40" rx="4"/>
+        <rect x="266" y="146" width="70" height="38" rx="4"/>
+      </g>
+      <g fill="#CFE3D2"><rect x="98" y="140" width="126" height="46" rx="7"/></g>
+      <text x="161" y="168" font-size="9" fill="#7FA98A" text-anchor="middle">城市公园</text>
+      <path id="rpath" d="M40,162 C86,150 92,104 150,96 C210,88 226,52 306,36"
+            fill="none" stroke="#FF5A1F" stroke-width="3.5" stroke-dasharray="7 5" opacity=".85"/>
+      <g>
+        <circle cx="40" cy="162" r="12" fill="#fff" stroke="#FF5A1F" stroke-width="2.5"/>
+        <text x="40" y="167" font-size="12" text-anchor="middle">🏪</text>
+        <text x="40" y="184" font-size="8.5" fill="#5C5C5C" text-anchor="middle">商家</text>
+      </g>
+      <g>
+        <circle cx="306" cy="36" r="12" fill="#fff" stroke="#00B578" stroke-width="2.5"/>
+        <text x="306" y="41" font-size="12" text-anchor="middle">🏠</text>
+        <text x="306" y="20" font-size="8.5" fill="#5C5C5C" text-anchor="middle">你的位置</text>
+      </g>
+      <g id="riderG">
+        <circle r="15" fill="#fff" stroke="#FF5A1F" stroke-width="3"/>
+        <text y="6" font-size="16" text-anchor="middle">🛵</text>
+      </g>
+    </svg>
+    <div class="badge-float" style="bottom:10px;right:10px">${o.step>=4?'已送达':(o.step>=3?'距你 '+Math.max(1,Math.round((1-frac)*12)/10)+' km':'骑手准备取餐')}</div>
+  </div>`}
+
+  <div class="body" style="padding-top:10px">
+    <div class="card">
+      <div class="steps">
+        ${STEPS.map((t,i)=>`<div class="st ${i<=o.step?'done':''} ${i===o.step?'cur':''}"><div class="dot"></div>${self&&i===4?'已取餐':t}</div>`).join('')}
+      </div>
+      ${self?'':`
+      <div class="divider"></div>
+      <div class="rider">
+        <div class="av">🛵</div>
+        <div class="gr"><div class="f14 b6">${o.rider.name} · ${o.rider.plate}</div>
+          <div class="f11 c3 mt6">${o.step>=4?'已完成配送，感谢你的等待':(o.step>=3?'正在为你送达，请保持电话畅通':'即将到店取餐')}</div></div>
+        <div class="act" onclick="toast('原型演示：不会真实拨号')">📞</div>
+        <div class="act" style="background:#3D7BFF" onclick="toast('原型演示：IM 会话未接入')">💬</div>
+      </div>`}
+      <div class="divider"></div>
+      <div class="f12 c2" style="line-height:2">
+        ${trackLogs(o).map(l=>`<div class="row sp"><span>${l[1]}</span><span class="c3">${l[0]}</span></div>`).join('')}
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="row" style="gap:10px">
+        <span style="font-size:20px">${o.shopEmoji}</span>
+        <span class="f14 b6 gr el">${o.shopName}</span>
+        <span class="f12 c3" onclick="nav('shop',{id:'${o.shopId}',reset:true})">再来一单 ›</span>
+      </div>
+      <div class="divider"></div>
+      ${o.items.map(i=>`<div class="row sp f13" style="padding:5px 0">
+        <span class="el gr">${i.name}${i.desc?`<span class="c3 f11">（${i.desc}）</span>`:''}</span>
+        <span class="c3" style="padding:0 10px">×${i.qty}</span><span>¥${money(i.unit*i.qty)}</span></div>`).join('')}
+      <div class="divider"></div>
+      <div class="row sp"><span class="f12 c3">实付</span><span class="price f15"><i>¥</i>${money(o.total)}</span></div>
+    </div>
+
+    <div style="padding:6px 16px 24px">
+      ${o.step<4
+        ? `<div class="row" style="gap:11px">
+             <div class="btn ghost" onclick="fastForward()">⏩ 加速演示</div>
+             <div class="btn ghost" onclick="cancelOrder('${o.no}')" style="color:var(--red)">取消订单</div>
+           </div>`
+        : (o.rated
+            ? `<div class="btn ghost" onclick="nav('shop',{id:'${o.shopId}',reset:true})">再来一单</div>`
+            : `<div class="btn" onclick="nav('rate',{no:'${o.no}'})">去评价，得 ¥5 无门槛券</div>`)}
+    </div>
+  </div>`;
+  moveRider(frac);
+  runTimer(o);
+});
+function trackTitle(o){
+  if(o.mode==='self') return o.step>=4?'已完成取餐':'商家备餐中，请到店取餐';
+  return ['已下单，等待商家接单…','商家已接单，正在备餐','骑手已到店，正在取餐','骑手已取餐，正在为你送达','订单已送达，请查看'][o.step];
+}
+function trackSub(o){
+  if(o.step>=4) return `取餐码 ${o.code} · 订单号 ${o.no}`;
+  const left = Math.max(1, Math.round(o.eta*(1-o.step/4)));
+  return `预计 ${left} 分钟后${o.mode==='self'?'可取餐':'送达'} · 取餐码 ${o.code}`;
+}
+function trackLogs(o){
+  const base = [
+    ['刚刚','✅ 订单已提交，等待商家确认'],
+    ['刚刚','👨‍🍳 商家已接单，开始备餐'],
+    ['刚刚','🛵 骑手 '+o.rider.name+' 已到店取餐'],
+    ['刚刚','🚀 骑手已取餐，正在配送途中'],
+    ['刚刚','📦 订单已送达，祝你用餐愉快'],
+  ];
+  return base.slice(0, o.step+1).reverse();
+}
+function moveRider(frac){
+  const p = $('#rpath'), g = $('#riderG');
+  if(!p||!g) return;
+  const len = p.getTotalLength();
+  const pt = p.getPointAtLength(len*Math.max(.02, frac));
+  g.setAttribute('transform', `translate(${pt.x},${pt.y})`);
+}
+function runTimer(o){
+  clearInterval(S.timer);
+  if(o.step>=4) return;
+  S.timer = setInterval(()=>{
+    if(o.step>=4){ clearInterval(S.timer); return; }
+    o.step++;
+    if(stack[stack.length-1]==='track') SCREENS.track.mount({no:o.no});
+    if(o.step>=4){ clearInterval(S.timer); toast('🎉 订单已送达'); }
+  }, 5000);
+}
+function fastForward(){
+  const o = S.curOrder;
+  if(!o||o.step>=4) return;
+  o.step = Math.min(4, o.step+1);
+  SCREENS.track.mount({no:o.no});
+  if(o.step>=4){ clearInterval(S.timer); toast('🎉 订单已送达'); }
+}
+function cancelOrder(no){
+  const o = S.orders.find(x=>x.no===no);
+  const canFree = o.step<=1;
+  confirmBox('取消订单',
+    canFree?'商家尚未出餐，取消可全额退款（模拟）。':'商家已出餐，取消需扣除部分餐损费用（模拟）。',
+    '确认取消',()=>{
+      o.step = -1; clearInterval(S.timer);
+      toast('订单已取消，退款将在 1-3 个工作日到账（模拟）',2200);
+      tabTo('orders');
+    });
+}
+
+/* =======================================================================
+   订单详情
+   ======================================================================= */
+defScreen('odetail', function(d){
+  SCREENS.odetail.data = d;
+  const o = S.orders.find(x=>x.no===d.no);
+  if(!o) return;
+  this.el.innerHTML = `
+  <div class="nav"><div class="ic" onclick="back()">‹</div><div class="t">订单详情</div><div class="ic" onclick="toast('客服会话为原型占位')">☏</div></div>
+  <div class="body">
+    <div class="card">
+      <div class="f17 b7">${o.step===-1?'订单已取消':(o.step>=4?'订单已完成':trackTitle(o))}</div>
+      <div class="f12 c3 mt6">${o.step===-1?'退款处理中（模拟）':(o.step>=4?'感谢你的光临':'预计 '+o.time)}</div>
+      ${o.step>=0&&o.step<4?`<div class="btn" style="margin-top:12px" onclick="nav('track',{no:'${o.no}'})">查看配送进度</div>`:''}
+    </div>
+    <div class="card">
+      <div class="row" style="gap:10px" onclick="nav('shop',{id:'${o.shopId}',reset:true})">
+        <span style="font-size:20px">${o.shopEmoji}</span>
+        <span class="f15 b6 gr el">${o.shopName}</span><span class="c3">›</span>
+      </div>
+      <div class="divider"></div>
+      ${o.items.map(i=>`
+        <div class="row" style="padding:9px 0;gap:10px">
+          <div class="thumb" style="width:42px;height:42px;font-size:21px">${i.emoji}</div>
+          <div class="gr"><div class="f13 b6 el">${i.name}</div>
+          ${i.desc?`<div class="f11 c3 el" style="margin-top:3px">${i.desc}</div>`:''}</div>
+          <div class="tr"><div class="f13">¥${money(i.unit*i.qty)}</div><div class="f11 c3">×${i.qty}</div></div>
+        </div>`).join('')}
+      <div class="divider"></div>
+      <div class="line"><span class="f13 c2">商品小计</span><span class="lv">¥${money(o.sub)}</span></div>
+      <div class="line"><span class="f13 c2">包装费</span><span class="lv">¥${money(o.pack)}</span></div>
+      <div class="line"><span class="f13 c2">配送费</span><span class="lv">${o.fee?'¥'+money(o.fee):'免配送费'}</span></div>
+      ${o.promo.amt?`<div class="line"><span class="f13 cb">店铺满减</span><span class="lv cb">-¥${money(o.promo.amt)}</span></div>`:''}
+      ${o.cpAmt?`<div class="line"><span class="f13 cb">优惠券（${o.cp.txt}）</span><span class="lv cb">-¥${money(o.cpAmt)}</span></div>`:''}
+      <div class="line"><span class="f13 cb">新客立减</span><span class="lv cb">-¥${money(o.newUser)}</span></div>
+      <div class="divider"></div>
+      <div class="row sp"><span class="f12 c3">共优惠 ¥${money(o.saved)}</span>
+        <span class="f13">实付 <span class="price f17"><i>¥</i>${money(o.total)}</span></span></div>
+    </div>
+    <div class="card">
+      <div class="line"><span class="c2 f13">订单号</span><span class="lv">${o.no}</span></div>
+      <div class="line"><span class="c2 f13">下单时间</span><span class="lv">${o.placed}</span></div>
+      <div class="line"><span class="c2 f13">支付方式</span><span class="lv">${o.pay}</span></div>
+      <div class="line"><span class="c2 f13">配送方式</span><span class="lv">${({std:'标准配送',fast:'准时达',self:'到店自取'})[o.mode]}</span></div>
+      <div class="line"><span class="c2 f13">${o.mode==='self'?'自取时间':'送达时间'}</span><span class="lv">${o.time}</span></div>
+      <div class="line"><span class="c2 f13">餐具</span><span class="lv">${o.tableware===0?'无需餐具':o.tableware+' 份'}</span></div>
+      <div class="line"><span class="c2 f13">备注</span><span class="lv">${o.note||'无'}</span></div>
+      ${o.mode!=='self'?`<div class="line"><span class="c2 f13">收货地址</span><span class="lv">${o.addr.addr} ${o.addr.detail}</span></div>`:''}
+      <div class="line"><span class="c2 f13">取餐码</span><span class="lv b6">${o.code}</span></div>
+    </div>
+    <div style="padding:6px 16px 26px">
+      <div class="btn ghost" onclick="nav('shop',{id:'${o.shopId}',reset:true})">再来一单</div>
+      ${o.step>=4&&!o.rated?`<div class="btn" style="margin-top:11px" onclick="nav('rate',{no:'${o.no}'})">评价晒单</div>`:''}
+    </div>
+  </div>`;
+});
+
+/* =======================================================================
+   评价
+   ======================================================================= */
+let rateState = {star:5, tags:[], txt:''};
+defScreen('rate', function(d){
+  SCREENS.rate.data = d;
+  const o = S.orders.find(x=>x.no===d.no);
+  const TAGS = ['出餐快','分量足','包装干净','味道正','骑手很有礼貌','送达及时','性价比高','会回购'];
+  this.el.innerHTML = `
+  <div class="nav"><div class="ic" onclick="back()">‹</div><div class="t">评价晒单</div><div class="ic"></div></div>
+  <div class="body">
+    <div class="card" style="text-align:center">
+      <div class="f14 b6">${o.shopName}</div>
+      <div class="starpick" style="margin:14px 0 6px">
+        ${[1,2,3,4,5].map(i=>`<span class="${i<=rateState.star?'on':''}" onclick="setStar(${i})">★</span>`).join('')}
+      </div>
+      <div class="f12 c2">${['','很差','较差','一般','满意','非常满意'][rateState.star]}</div>
+    </div>
+    <div class="card">
+      <div class="f13 b6">这些地方很棒（可多选）</div>
+      <div class="row" style="flex-wrap:wrap;gap:8px;margin-top:11px">
+        ${TAGS.map(t=>`<div class="chip ${rateState.tags.includes(t)?'on':''}" onclick="tagTap('${t}')">${t}</div>`).join('')}
+      </div>
+      <div class="divider"></div>
+      <textarea id="rateTxt" placeholder="说说这次的用餐体验，帮助更多人参考（选填）">${rateState.txt}</textarea>
+      <div class="row" style="gap:9px;margin-top:11px">
+        ${[1,2].map(()=>`<div style="width:64px;height:64px;border:1px dashed #DDD;border-radius:8px;display:flex;align-items:center;justify-content:center;color:#BBB;font-size:22px" onclick="toast('原型演示：不支持上传图片')">＋</div>`).join('')}
+      </div>
+      <div class="row sp" style="padding-top:14px">
+        <span class="f13">匿名评价</span>
+        <span class="radio" onclick="this.classList.toggle('on')">✓</span>
+      </div>
+    </div>
+    <div style="padding:6px 16px 26px"><div class="btn" onclick="submitRate('${o.no}')">提交评价</div></div>
+  </div>`;
+});
+function setStar(i){ rateState.star=i; SCREENS.rate.mount(SCREENS.rate.data); }
+function tagTap(t){
+  const i=rateState.tags.indexOf(t); i>-1?rateState.tags.splice(i,1):rateState.tags.push(t);
+  rateState.txt = $('#rateTxt').value;
+  SCREENS.rate.mount(SCREENS.rate.data);
+}
+function submitRate(no){
+  const o = S.orders.find(x=>x.no===no);
+  o.rated = true; o.rate = {...rateState, txt:$('#rateTxt').value};
+  S.platCoupons.push({id:'p'+(S.platCoupons.length+1),amt:5,need:0,txt:'评价奖励 无门槛5元券',exp:'2026-08-30'});
+  rateState = {star:5,tags:[],txt:''};
+  toast('评价已提交，¥5 无门槛券已到账 🎉',2000);
+  tabTo('orders');
+}
+
+/* =======================================================================
+   订单列表
+   ======================================================================= */
+let orderTab = 0;
+defScreen('orders', function(){
+  const tabs = ['全部','进行中','已完成'];
+  let list = S.orders.slice();
+  if(orderTab===1) list = list.filter(o=>o.step>=0 && o.step<4);
+  if(orderTab===2) list = list.filter(o=>o.step>=4);
+  this.el.innerHTML = `
+  <div class="nav"><div class="ic"></div><div class="t">我的订单</div><div class="ic" onclick="toast('客服会话为原型占位')">☏</div></div>
+  <div style="background:#fff;display:flex;border-bottom:1px solid var(--line);flex:none">
+    ${tabs.map((t,i)=>`<div style="flex:1;text-align:center;padding:12px 0;font-size:14px;${i===orderTab?'color:var(--brand);font-weight:600;border-bottom:2px solid var(--brand)':'color:var(--txt2)'}" onclick="setOTab(${i})">${t}</div>`).join('')}
+  </div>
+  <div class="body">
+    ${list.length? list.map(o=>`
+      <div class="card" onclick="nav('odetail',{no:'${o.no}'})">
+        <div class="row sp">
+          <div class="row" style="gap:8px"><span style="font-size:19px">${o.shopEmoji}</span><span class="f15 b6 el" style="max-width:200px">${o.shopName}</span></div>
+          <span class="f12 ${o.step===-1?'c3':(o.step>=4?'cg':'cb')} b6">${o.step===-1?'已取消':(o.step>=4?'已完成':STEPS[o.step])}</span>
+        </div>
+        <div class="row mt10" style="gap:8px">
+          ${o.items.slice(0,3).map(i=>`<div class="thumb" style="width:50px;height:50px;font-size:24px">${i.emoji}</div>`).join('')}
+          <div class="gr f12 c3">${o.items.map(i=>i.name).join('、').slice(0,22)}${o.items.length>2?'…':''}<br>共${o.items.reduce((a,b)=>a+b.qty,0)}件</div>
+          <div class="tr"><div class="price f15"><i>¥</i>${money(o.total)}</div><div class="f11 c3">${o.placed.slice(5,16)}</div></div>
+        </div>
+        <div class="divider"></div>
+        <div class="row" style="justify-content:flex-end;gap:9px">
+          ${o.step>=0&&o.step<4?`<div class="chip" onclick="event.stopPropagation();nav('track',{no:'${o.no}'})">查看进度</div>`:''}
+          ${o.step>=4&&!o.rated?`<div class="chip on" onclick="event.stopPropagation();nav('rate',{no:'${o.no}'})">去评价</div>`:''}
+          <div class="chip" onclick="event.stopPropagation();nav('shop',{id:'${o.shopId}',reset:true})">再来一单</div>
+        </div>
+      </div>`).join('')
+    : `<div class="empty"><span class="e">📋</span>还没有${tabs[orderTab]}订单<br><span class="cb" onclick="tabTo('home')">去首页看看 ›</span></div>`}
+  </div>
+  ${tabbarHTML('orders')}`;
+}, false);
+function setOTab(i){ orderTab=i; SCREENS.orders.mount({}); }
+
+/* =======================================================================
+   我的
+   ======================================================================= */
+defScreen('me', function(){
+  const done = S.orders.filter(o=>o.step>=4).length;
+  this.el.innerHTML = `
+  <div class="body" style="padding-bottom:0">
+    <div class="mehead">
+      <div class="row" style="gap:12px">
+        <div style="width:56px;height:56px;border-radius:50%;background:rgba(255,255,255,.25);display:flex;align-items:center;justify-content:center;font-size:28px">🧑</div>
+        <div class="gr">
+          <div class="f17 b7">张小闪</div>
+          <div class="f12" style="opacity:.92;margin-top:4px">138****6620 · 已下单 ${S.orders.length} 笔</div>
+        </div>
+        <div class="ic" style="color:#fff" onclick="toast('设置页为原型占位')">⚙</div>
+      </div>
+    </div>
+    <div class="vipcard" onclick="toast('会员权益为原型占位')">
+      <div><div class="f13 b6">闪碟会员 · 每月省 ¥38</div>
+      <div class="f11" style="opacity:.8;margin-top:4px">开通享 6 张免配送费券</div></div>
+      <div style="background:#F5DFB8;color:#3A3226;border-radius:14px;padding:5px 13px;font-size:12px;font-weight:700">立即开通</div>
+    </div>
+    <div class="card">
+      <div class="grid4">
+        <div class="g" onclick="toast('钱包余额 ¥0.00（模拟）')"><div class="n">0.00</div><div class="f11 c3">余额</div></div>
+        <div class="g" onclick="nav('mycoupon')"><div class="n">${S.platCoupons.length}</div><div class="f11 c3">优惠券</div></div>
+        <div class="g" onclick="toast('积分商城为原型占位')"><div class="n">128</div><div class="f11 c3">积分</div></div>
+        <div class="g" onclick="toast('收藏夹为原型占位')"><div class="n">3</div><div class="f11 c3">收藏</div></div>
+      </div>
+    </div>
+    <div class="card menulist">
+      <div class="mi" onclick="tabTo('orders')"><span class="mic">📋</span><span class="gr">我的订单</span><span class="c3 f12">${done} 单已完成 ›</span></div>
+      <div class="mi" onclick="nav('addr')"><span class="mic">📍</span><span class="gr">收货地址</span><span class="c3 f12">${S.addr.length} 个 ›</span></div>
+      <div class="mi" onclick="nav('mycoupon')"><span class="mic">🎟️</span><span class="gr">我的优惠券</span><span class="c3 f12">${S.platCoupons.length} 张可用 ›</span></div>
+      <div class="mi" onclick="toast('发票管理为原型占位')"><span class="mic">🧾</span><span class="gr">发票管理</span><span class="c3">›</span></div>
+      <div class="mi" onclick="toast('客服会话为原型占位')"><span class="mic">🎧</span><span class="gr">在线客服</span><span class="c3">›</span></div>
+      <div class="mi" onclick="resetDemo()"><span class="mic">🔄</span><span class="gr">重置演示数据</span><span class="c3 f12">清空订单与购物车 ›</span></div>
+    </div>
+    <div class="f11 c3" style="text-align:center;padding:10px 0 22px">闪碟外卖 · 交互原型 v1.0<br>模拟数据，不产生真实交易</div>
+  </div>
+  ${tabbarHTML('me')}`;
+}, false);
+defScreen('mycoupon', function(){
+  this.el.innerHTML = `
+  <div class="nav"><div class="ic" onclick="back()">‹</div><div class="t">我的优惠券</div><div class="ic"></div></div>
+  <div class="body">
+    <div class="f12 c3" style="padding:14px 16px 0">平台券（${S.platCoupons.length}）</div>
+    ${S.platCoupons.map(x=>`
+      <div class="card row" style="gap:0;padding:0;overflow:hidden">
+        <div style="width:104px;background:linear-gradient(160deg,#FF7A45,#FF5A1F);color:#fff;padding:16px 8px;text-align:center">
+          <div style="font-size:26px;font-weight:700">¥${x.amt}</div>
+          <div class="f11" style="opacity:.9">${x.need?'满'+x.need+'可用':'无门槛'}</div>
+        </div>
+        <div class="gr" style="padding:14px"><div class="f14 b6">${x.txt}</div>
+        <div class="f11 c3 mt6">全平台通用 · 有效期至 ${x.exp}</div></div>
+        <div style="padding-right:14px"><div class="specbtn" onclick="tabTo('home')">去使用</div></div>
+      </div>`).join('')}
+    <div class="f12 c3" style="padding:14px 16px 0">店铺券（领取后在对应店铺结算可用）</div>
+    ${SHOPS.flatMap(s=>(s.coupons||[]).filter(c=>S.gotCoupons.includes(c.id)).map(c=>`
+      <div class="card row"><div class="gr"><div class="f14 b6">${c.txt}</div>
+      <div class="f11 c3 mt6">${s.name}</div></div>
+      <div class="specbtn" onclick="nav('shop',{id:'${s.id}',reset:true})">去点餐</div></div>`)).join('')
+      || `<div class="f12 c3" style="padding:12px 16px">暂无已领取的店铺券，去店铺页领取吧</div>`}
+  </div>`;
+});
+function resetDemo(){
+  confirmBox('重置演示','将清空全部订单、购物车与已领取的券，恢复初始状态。','重置',()=>{
+    clearInterval(S.timer);
+    S.orders=[]; S.curOrder=null; S.cart={shopId:null,items:[]}; S.gotCoupons=[];
+    S.platCoupons=[{id:'p1',amt:12,need:40,txt:'平台新客券 满40减12',exp:'2026-08-15'},
+                   {id:'p2',amt:5,need:20,txt:'午市专享 满20减5',exp:'2026-08-02'}];
+    tabTo('home'); toast('演示数据已重置');
+  });
+}
+
+/* ---------------- 启动 ---------------- */
+SCREENS.home.mount({});
+paint();
+setTimeout(()=>toast('👋 欢迎体验：从首页选一家店，走一遍完整下单流程',2600),600);
+</script>
+</body>
+</html>
